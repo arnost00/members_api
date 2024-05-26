@@ -1,0 +1,5 @@
+# ignore dotdir subdirectories
+.*/**
+!.*/.gitkeep
+
+dev/
