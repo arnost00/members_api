@@ -8,27 +8,23 @@ use Pecee\SimpleRouter\Exceptions\HttpException;
 
 use Endpoints\User;
 use Endpoints\Race;
-use Endpoints\Basic;
-use Endpoints\Debug;
 use Endpoints\General;
-use Endpoints\Admin;
 use Controllers\LoaderMiddleware;
 
 use Core\Clubs;
 
-Router::fetch("/", function () {
+Router::form("/", function () {
     return "<h1>Greetings, traveller!</h1>";
 });
 
 General::init();
-Admin::init();
 
-Router::group(["prefix" => "/{clubname}"], function ($clubname = null) {
+Router::group(["prefix" => "/{clubname}", "preflight" => true], function ($clubname = null) {
     // prevent load on boot
     if ($clubname !== null) {
         // whitelist only alphanumeric chars
         if (!preg_match("/^\w+$/", $clubname)) {
-            throw new HttpException("I'm a teapot. How can I know the club?", 418);
+            throw new HttpException("I'm a teapot. How can I know that club?", 418);
             return;
         }
 
@@ -41,13 +37,11 @@ Router::group(["prefix" => "/{clubname}"], function ($clubname = null) {
     }
     
     Router::group(["middleware" => LoaderMiddleware::class], function () {
-        Router::fetch("/", function ($clubname) {
-            return "<h1>Welcome, traveller!</h1><p>You have just landed on the REST APIv3 of <b>" . $clubname . "</b>.</p>\n<code>" . json_encode(request()->current, JSON_PRETTY_PRINT) . "</code>";
+        Router::form("/", function ($clubname) {
+            return "<h1>Welcome, traveller!</h1><p>You have just landed on the REST APIv3 of <b>" . $clubname . "</b>.</p>\n<pre>" . json_encode(request()->current, JSON_PRETTY_PRINT) . "</pre>";
         });
         
         User::init();
         Race::init();
-        Basic::init();
-        Debug::init();
     });
 });

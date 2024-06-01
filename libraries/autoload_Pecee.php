@@ -2,7 +2,7 @@
 
 // Credits to @skipperbent, https://github.com/skipperbent/simple-php-router/
 
-// New type is added for convience at SimpleRouter::fetch, derived from JS's fetch function name that makes preflight requests.
+// New type is added for convience at SimpleRouter::form, derived from JS's fetch function name that makes preflight requests.
 //
 // /**
 //  * This type will route the given url to your callback on the provided request methods.
@@ -12,7 +12,7 @@
 //  * @param string|array|Closure $callback
 //  * @param array|null $settings
 //  * @return RouteUrl|IRoute
-//  * @see SimpleRouter::fetch
+//  * @see SimpleRouter::form
 //  */
 // public static function fetch(string $url, $callback, array $settings = null): IRoute
 // {

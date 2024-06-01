@@ -16,13 +16,13 @@ class User implements Endpoint
         Router::group(["prefix" => "/user"], function () {
             $user_id = ["user_id" => "[0-9]+"];
 
-            Router::fetch("/login", [static::class, "login"]);
-            Router::fetch("/{user_id}", [static::class, "show"])->where($user_id);
+            Router::form("/login", [static::class, "login"]);
+            Router::form("/{user_id}", [static::class, "show"])->where($user_id);
 
             Router::group(["middleware" => RequireTokenMiddleware::class], function () use ($user_id) {
-                Router::fetch("/{user_id}/managing", [static::class, "managing"])->where($user_id);
-                Router::fetch("/", [static::class, "data"]);
-                Router::fetch("/update", [static::class, "update"]);
+                Router::form("/{user_id}/managing", [static::class, "managing"])->where($user_id);
+                Router::form("/", [static::class, "data"]);
+                Router::form("/update", [static::class, "update"]);
             });
         });
     }

@@ -14,18 +14,18 @@ use Controllers\RequireTokenMiddleware;
 class Race implements Endpoint
 {
     public static function init(): void {
-        Router::fetch("/races", [static::class, "races"]);
+        Router::form("/races", [static::class, "races"]);
         
         Router::group(["prefix" => "/race"], function () {
             $race_id = ["race_id" => "[0-9]+"];
             $user_id = ["user_id" => "[0-9]+"];
 
-            Router::fetch("/", [static::class, "index"]);
-            Router::fetch("/{race_id}", [static::class, "detail"])->where($race_id);
-            Router::fetch("/{race_id}/redirect", [static::class, "redirect"])->where($race_id);
+            Router::form("/", [static::class, "index"]);
+            Router::form("/{race_id}", [static::class, "detail"])->where($race_id);
+            Router::form("/{race_id}/redirect", [static::class, "redirect"])->where($race_id);
 
             Router::group(["middleware" => RequireTokenMiddleware::class], function () use ($race_id, $user_id) {
-                Router::fetch("/{race_id}/relations", [static::class, "relations"])->where($race_id);
+                Router::form("/{race_id}/relations", [static::class, "relations"])->where($race_id);
                 Router::post("/{race_id}/signin/{user_id}", [static::class, "signin"])->where($race_id + $user_id);
                 Router::post("/{race_id}/signout/{user_id}", [static::class, "signout"])->where($race_id + $user_id);
             });

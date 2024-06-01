@@ -31,7 +31,7 @@ class ApiExceptionHandler implements IExceptionHandler {
         ] + (request()->debug ? [
             // debug
             "method" => $_SERVER["REQUEST_METHOD"],
-            "path" => $_SERVER["PATH_INFO"],
+            "path" => $_SERVER["REQUEST_URI"],
             "input" => input()->all(),
             "line" => $exception->getLine(),
             "file" => $exception->getFile(),
@@ -44,12 +44,17 @@ class ApiExceptionHandler implements IExceptionHandler {
             response()->httpCode($exception->getCode());
             response()->json($content);
         } else {
-            echo "<h1>API ERROR:<br /><i>" . $exception->getMessage() . "</i></h1>";
+            echo "<html><header>";
+            echo "<title>API ERROR " . (string)$exception->getCode() . ": " . $exception->getMessage() . "</title>";
+            echo "</header><body>";
+            echo "<h1>API ERROR " . (string)$exception->getCode() . ": <br /><i>" . $exception->getMessage() . "</i></h1>";
             echo "<pre>" . json_encode($content, JSON_PRETTY_PRINT) . "</pre>";
             
             if (!request()->debug) {
                 echo "<p>For more debugging information, use test clubs or set <code>request()->debug = true;</code>.</p>";
             }
+
+            echo "</body></html>";
         }
 
         exit;

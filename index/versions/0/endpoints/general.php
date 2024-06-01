@@ -12,7 +12,7 @@ use Core\Clubs;
 
 class General implements Endpoint {
     public static function init(): void {
-        Router::fetch("/clubs", [static::class, "clubs"]);
+        Router::form("/clubs", [static::class, "clubs"]);
     }
 
     public static function clubs() {

@@ -3,7 +3,7 @@
 Special thanks to the following contributors for their invaluable tools and libraries that have greatly enhanced this project:
 
 - **simple-php-router**: Developed by [@skipperbent](https://github.com/skipperbent). This routing library has provided a robust and flexible framework for handling URL routing within our PHP application.
-  - One custom function `Router::fetch` was added to better suit specific needs.
+  - One custom function `Router::form` was added to better suit specific needs.
   - The modified code is avaible on [this fork](https://github.com/jurakin/simple-php-router).
   - [Original commit](https://github.com/skipperbent/simple-php-router/commit/b98d40b84b6e862bf250b179c0229efb7344a7bb).
 - **php-jwt**: Developed by [@adhocore](https://github.com/adhocore). This library has been essential for implementing JSON Web Token (JWT) authentication.

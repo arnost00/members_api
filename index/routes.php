@@ -22,7 +22,7 @@ request()->current = null;
 request()->version = null;
 
 Router::group(["prefix" => "/api/", "exceptionHandler" => ApiExceptionHandler::class], function () {
-    Router::fetch("/", function () {
+    Router::form("/", function () {
         throw new ApiException("lolol", 400);
         return "<h1>Members API; Production version</h1>";
     });
@@ -42,8 +42,4 @@ Router::group(["prefix" => "/api/", "exceptionHandler" => ApiExceptionHandler::c
         
         require Manifest::$versions_directory . $version . "/autoload.php";
     })->where(["version" => "\d+"]);
-
-    Router::fetch("/club/{everything}", function ($everything) {
-        response()->redirect("/api/0/" . $everything);
-    })->where(["everything" => ".*"]);
 });
