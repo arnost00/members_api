@@ -3,6 +3,7 @@
 namespace Manifest;
 
 class Manifest {
+    // allowed clubs
     public static $available_clubs = [
         "abm",
         "mbm",
@@ -18,13 +19,14 @@ class Manifest {
     // $path_to_clubs . $clubname . "/cfg/_cfg.php";
     public static $path_to_clubs = __DIR__ . "/../";
     
-    // firebase config file or null for disabled
-    public static $firebase_config = __DIR__ . "/.secrets/your-adminsdk-file.json";
-
-    // directory where to put log files
-    // only allowed when club `is_release` is `false`
-    // ends with slash or null for disabled
-    public static $logging_directory = __DIR__ . "/.logging/";
+    // firebase adminsdk file from firebase
+    public static $firebase_adminsdk = __DIR__ . "/.secrets/your-adminsdk-file.json";
     
-    public static $versions_directory = __DIR__ . "/index/versions/";
+    // where current firebase token should be stored
+    public static $firebase_tokens = __DIR__ . "/.secrets/orientacny-beh-firebase-tokens.json";
+
+    // must NOT have trailing slash
+    public static $logging_directory = __DIR__ . "/.logging";
+    public static $versions_directory = __DIR__ . "/index/versions";
+    public static $core_directory = __DIR__ . "/core";
 }

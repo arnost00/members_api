@@ -15,7 +15,6 @@ if (strpos($request_uri, "/api/clubs") === 0) {
 
 require_once __DIR__ . "/libraries/autoload.php";
 require_once __DIR__ . "/manifest.php";
-require_once __DIR__ . "/core/autoload.php";
 
 // production routes
 

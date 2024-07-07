@@ -1,4 +1,4 @@
-# Credits
+# Credits to library authors
 
 Special thanks to the following contributors for their invaluable tools and libraries that have greatly enhanced this project:
 

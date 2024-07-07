@@ -2,6 +2,8 @@
 
 namespace Core;
 
+require_once __DIR__ . "/api.php";
+
 use \Pecee\SimpleRouter\Exceptions\HttpException;
 use Core\Api;
 

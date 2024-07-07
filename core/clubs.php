@@ -2,6 +2,8 @@
 
 namespace Core;
 
+require_once __DIR__ . "/api.php";
+
 use Pecee\SimpleRouter\Exceptions\HttpException;
 use Manifest\Manifest;
 use Core\Api;
@@ -37,7 +39,6 @@ class Clubs {
             // clubname is required by the middleware
             "clubname" => $clubname,
 
-            "api_version" => $g_api_version ?? 0,
             "is_release" => $g_is_release ?? false,
 
             "fullname" => $g_fullname ?? "",
@@ -52,6 +53,10 @@ class Clubs {
 
     public static function import($clubname) {
         $___cache___ = get_defined_vars();
+
+        if (!is_dir(Manifest::$path_to_clubs . $clubname . "/cfg/")) {
+            throw new HttpException("Club not found. Attempting to join a non-existent club?", 404);
+        }
 
         // do not use include_once to prevent future errors
         // do not use require* to prevent raising error

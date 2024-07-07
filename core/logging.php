@@ -23,13 +23,8 @@ class Logging {
     public static $stamp_format = DATE_W3C;
 
     public static function write($content) {
-        if (!Manifest::$logging_directory === null) {
-            throw new HttpException("logging is disabled", 500);
-            return;
-        }
-
         // checks for year directory
-        $path = Manifest::$logging_directory . date(static::$year_format) . "/";
+        $path = Manifest::$logging_directory . "/" . date(static::$year_format) . "/";
         is_dir($path) || mkdir($path);
 
         // checks for month directory

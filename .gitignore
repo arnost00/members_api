@@ -1,5 +1,7 @@
-# ignore dotdir subdirectories
+# ignore content of directories starting with a dot,
+# but keep the directories themselves
 .*/**
 !.*/.gitkeep
+!.*/README.md
 
 dev/

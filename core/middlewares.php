@@ -4,11 +4,6 @@ namespace Core;
 
 use Pecee\Http\middleware\IMiddleware;
 use Pecee\Http\Request;
-use Pecee\SimpleRouter\Exceptions\HttpException;
-use Pecee\SimpleRouter\SimpleRouter as Router;
-
-use Core\Api;
-use Core\Clubs;
 
 class RequireAdminMiddleware implements IMiddleware
 {

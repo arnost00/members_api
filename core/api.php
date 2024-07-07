@@ -2,6 +2,8 @@
 
 namespace Core;
 
+require_once __DIR__ . "/database.php";
+
 use Pecee\SimpleRouter\Exceptions\HttpException;
 
 use Jwt\JWT;
@@ -9,14 +11,12 @@ use Jwt\JWTException;
 
 use Core\Database;
 
-class Api
-{
+class Api {
     private static ?Config $_config = null;
     private static ?Database $_database = null;
     private static ?Token $_token = null;
 
-    public static function config()
-    {
+    public static function config() {
         if (static::$_config === null) {
             static::$_config = new Config();
         }
@@ -24,8 +24,7 @@ class Api
         return static::$_config;
     }
 
-    public static function database()
-    {
+    public static function database() {
         if (static::$_database === null) {
             static::$_database = new Database();
         }
@@ -42,27 +41,22 @@ class Api
     }
 }
 
-class Config
-{
-    public $data = [];
+class Config {
+    private $data = [];
 
-    public function __isset($name): bool
-    {
+    public function __isset($name): bool {
         return array_key_exists($name, $this->data) === true;
     }
 
-    public function __set($name, $value = null)
-    {
+    public function __set($name, $value = null) {
         $this->data[$name] = $value;
     }
 
-    public function __get($name)
-    {
+    public function __get($name) {
         return $this->data[$name] ?? null;
     }
 
-    public function update($data)
-    {
+    public function update($data) {
         $this->data += $data;
     }
 }

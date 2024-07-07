@@ -1,14 +1,20 @@
 <?php
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 
-require_once Manifest\Manifest::$core_directory . "/autoload.php";
-require_once __DIR__ . "/controllers/autoload.php";
-require_once __DIR__ . "/endpoints/autoload.php";
+require_once __DIR__ . "/controllers/middlewares.php";
+require_once __DIR__ . "/endpoints/user.php";
+require_once __DIR__ . "/endpoints/race.php";
+require_once __DIR__ . "/endpoints/debug.php";
+require_once __DIR__ . "/endpoints/general.php";
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 use Pecee\SimpleRouter\Exceptions\HttpException;
 
 use Endpoints\User;
 use Endpoints\Race;
+use Endpoints\Debug;
 use Endpoints\General;
 use Controllers\LoaderMiddleware;
 
@@ -25,7 +31,7 @@ Router::group(["prefix" => "/{clubname}", "preflight" => true], function ($clubn
     if ($clubname !== null) {
         // whitelist only alphanumeric chars
         if (!preg_match("/^\w+$/", $clubname)) {
-            throw new HttpException("I'm a teapot. How can I know that club?", 418);
+            throw new HttpException("The club you're looking for is as real as a teapot handling coffee. Try a different name!", 418);
             return;
         }
 
@@ -44,5 +50,6 @@ Router::group(["prefix" => "/{clubname}", "preflight" => true], function ($clubn
         
         User::init();
         Race::init();
+        Debug::init();
     });
 });
