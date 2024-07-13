@@ -35,7 +35,14 @@ Router::group(["prefix" => "/{clubname}", "preflight" => true], function ($clubn
             return;
         }
 
-        request()->current = (object)Clubs::info($clubname);
+        $result = Clubs::info($clubname);
+
+        if ($result === null) {
+            throw new HttpException("Club not found. Attempting to join a non-existent club?", 404);
+            return;
+        }
+
+        request()->current = (object)$result;
 
         // use @ to suppress errors when club is not found
         if (@request()->current->is_release === false) {
