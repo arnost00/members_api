@@ -44,8 +44,7 @@ Router::group(["prefix" => "/{clubname}", "preflight" => true], function ($clubn
 
         request()->current = (object)$result;
 
-        // use @ to suppress errors when club is not found
-        if (@request()->current->is_release === false) {
+        if (request()->current->is_release === false) {
             request()->debug = true;
         }
     }
