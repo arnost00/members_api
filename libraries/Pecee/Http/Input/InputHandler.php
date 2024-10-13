@@ -74,10 +74,10 @@ class InputHandler
         if ($this->request->isPostBack() === true) {
 
             $contents = file_get_contents('php://input');
-
+            
             // Append any PHP-input json
             if (strpos(trim($contents), '{') === 0) {
-                $post = json_decode($contents, true);
+                $post = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
 
                 if ($post !== false) {
                     $this->originalPost += $post;

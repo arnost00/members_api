@@ -4,8 +4,8 @@ Global API for "members" system.
 
 # Documentation
 
-- [Version 0](/index/versions/0/README.md)
-- [Version 1](/index/versions/1/README.md)
+- [Version 1](/index/versions/1/README.md) (STABLE)
+- [Version 2](/index/versions/2/README.md) (LATEST)
 
 # URL Structure
 

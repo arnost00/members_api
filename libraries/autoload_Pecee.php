@@ -125,6 +125,7 @@ function request(): Request
     return Router::request();
 }
 
+// Do NOT uncomment this function, this is replaced by Input class in routes.php
 /**
  * Get input class
  * @param string|null $index Parameter index name
@@ -132,14 +133,14 @@ function request(): Request
  * @param array ...$methods Default methods
  * @return \Pecee\Http\Input\InputHandler|array|string|null
  */
-function input($index = null, $defaultValue = null, ...$methods)
-{
-    if ($index !== null) {
-        return request()->getInputHandler()->value($index, $defaultValue, ...$methods);
-    }
+// function input($index = null, $defaultValue = null, ...$methods)
+// {
+//     if ($index !== null) {
+//         return request()->getInputHandler()->value($index, $defaultValue, ...$methods);
+//     }
 
-    return request()->getInputHandler();
-}
+//     return request()->getInputHandler();
+// }
 
 /**
  * @param string $url

@@ -1,7 +1,5 @@
 <?php
 
-use Pecee\SimpleRouter\Exceptions\HttpException;
-
 class CurlRequest {
     private static function _convert_headers($headers) {
         return array_map(function ($key, $value) {
@@ -71,12 +69,12 @@ class CurlResponse {
 
     function raise_for_error() {
         if ($this->error) {
-            throw new HttpException($this->error, 500);
+            throw new ApiException($this->error, 500);
             return;
         }
 
         if ($this->status_code >= 400) {
-            throw new HttpException("curl: Server ($this->server) returned $this->status_code.", 500);
+            throw new ApiException("curl: Server ($this->server) returned $this->status_code.", 500);
             return;
         }
     }
@@ -85,7 +83,7 @@ class CurlResponse {
         $data = json_decode($this->response, true);
         
         if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            throw new HttpException(json_last_error_msg(), 500);
+            throw new ApiException(json_last_error_msg(), 500);
         }
         
         return $data;

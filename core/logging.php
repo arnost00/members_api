@@ -2,9 +2,6 @@
 
 namespace Core;
 
-use Manifest\Manifest;
-use Pecee\SimpleRouter\Exceptions\HttpException;
-
 class Logging {
     // a file per day, one folder for each month, one folder for each year.
 
@@ -24,7 +21,7 @@ class Logging {
 
     public static function write($content) {
         // checks for year directory
-        $path = Manifest::$logging_directory . "/" . date(static::$year_format) . "/";
+        $path = \Manifest::$logging_directory . "/" . date(static::$year_format) . "/";
         is_dir($path) || mkdir($path);
 
         // checks for month directory
@@ -60,11 +57,8 @@ class Logging {
     }
 
     public static function custom($text, $level) {
-        // fallback clubname to empty string
-        $clubname = @request()->current->clubname ?? "";
-
-        // <DATE> - <CLUB>::<IP> - <LEVEL> - <JSON OR TEXT>
-        $content = date(static::$stamp_format) . " - " . $clubname . "::" . $_SERVER["REMOTE_ADDR"] . " - " . $level . " - " . $text;
+        // <DATE> - <IP>::<URI> - <LEVEL> - <JSON OR TEXT>
+        $content = date(static::$stamp_format) . " - " . $_SERVER["REMOTE_ADDR"] . "::" . $_SERVER["REQUEST_URI"] . " - " . $level . " - " . $text;
 
         static::write($content);
     }
@@ -85,7 +79,12 @@ class Logging {
         return static::custom($text, static::$LEVEL_FATAL);
     }
 
-    public static function exception($content) {
-        return static::error(json_encode($content));
+    public static function exception($exception) {
+        return static::error(json_encode([
+            "message" => $exception->getMessage(),
+            "code" => $exception->getCode(),
+            "file" => $exception->getFile(),
+            "trace" => $exception->getTrace(),
+        ]));
     }
 }

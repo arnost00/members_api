@@ -4,24 +4,18 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *, Authorization");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 
-require_once __DIR__ . "/../core/exceptions.php";
-
-// the json header should not be set globally
-// because it is handled by the router if needed
-//
-// header("Content-Type: application/json");
+require_once Manifest::$libraries_directory . "/autoload_Pecee.php";
+require_once Manifest::$core_directory . "/exceptions.php";
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
-use Pecee\SimpleRouter\Exceptions\HttpException;
 
-use Manifest\Manifest;
 use Core\ApiCrashReport;
+use Core\ApiException;
 
-set_exception_handler([ApiCrashReport::class, "report"]);
+ApiCrashReport::init();
 
 // fallback values
 request()->debug = false;
-request()->current = null;
 request()->version = null;
 
 Router::group(["prefix" => "/api/"], function () {
@@ -30,23 +24,24 @@ Router::group(["prefix" => "/api/"], function () {
     });
 
     Router::form("/error", function () {
-        throw new HttpException("As you wish!", 418);
+        throw new ApiException("As you wish!", 418);
     });
 
-    Router::group(["prefix" => "/{version}"], function ($version = null) {
-        // early return to allow other routers to load
-        if ($version === null) {
-            return;
-        }
-
+    Router::partialGroup("/{version}", function ($version) {
         // allow only digits
         // double check the version to make sure it can't be exploited
         if (!preg_match("/^\d+$/", $version)) {
-            throw new HttpException("I'm a teapot!", 418);
+            throw new ApiException("I'm a teapot!", 418);
         }
         
         if (!@(include Manifest::$versions_directory . "/" . $version . "/autoload.php")) {
-            throw new HttpException("Oops! Looks like the API version you're searching for is playing hide and seek with us. Please check if it slipped into another dimension or try a different version!", 404);
+            throw new ApiException("Oops! Looks like the API version you're searching for is playing hide and seek with us. Please check if it slipped into another dimension or try a different version!", 404);
         }
     })->where(["version" => "\d+"]);
+
+    Router::partialGroup("/members", function () {
+        if (!@(include Manifest::$versions_directory . "/members/autoload.php")) {
+            throw new ApiException("Oops! Looks like the members autoload file is not there.", 500);
+        }
+    });
 });

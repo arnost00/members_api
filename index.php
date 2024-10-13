@@ -13,7 +13,7 @@ if (strpos($request_uri, "/api/clubs") === 0) {
     $request_uri = "/api/0/clubs/";
 }
 
-require_once __DIR__ . "/libraries/autoload.php";
+// must be imported
 require_once __DIR__ . "/manifest.php";
 
 // production routes

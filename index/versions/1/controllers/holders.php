@@ -2,11 +2,10 @@
 
 namespace Controllers;
 
-use Pecee\SimpleRouter\Exceptions\HttpException;
-use Manifest\Manifest;
 use Core\Api;
+use Core\ApiException;
 
-require_once Manifest::$core_directory . "/api.php";
+require_once \Manifest::$core_directory . "/api.php";
 
 class Holder {
     /**
@@ -20,7 +19,7 @@ class Holder {
     public static function init() {
         foreach (static::$translate as $pointer => $alias) {
             if (!defined($pointer)) {
-                throw new HttpException("Constant '" . $pointer . "' (alias '" . $alias . "') is not defined.", 500);
+                throw new ApiException("Constant '" . $pointer . "' (alias '" . $alias . "') is not defined.", 500);
                 return;
             }
 
@@ -120,7 +119,7 @@ class Policies extends Holder {
         $output = Api::database()->fetch_assoc("SELECT `policy_mng` FROM `" . Tables::$ACCOUNT . "` WHERE `id_users` = ? LIMIT 1", $user_id);
 
         if (!$output) {
-            throw new HttpException("Username does not exists.", 401);
+            throw new ApiException("Username does not exists.", 401);
         }
 
         return $output["policy_mng"];

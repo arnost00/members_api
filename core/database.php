@@ -4,7 +4,6 @@ namespace Core;
 
 require_once __DIR__ . "/api.php";
 
-use \Pecee\SimpleRouter\Exceptions\HttpException;
 use Core\Api;
 
 class Database
@@ -31,7 +30,7 @@ class Database
         $this->mysqli = new \mysqli($this->server, $this->username, $this->password, $this->database);
 
         if ($this->mysqli->connect_errno) {
-            throw new HttpException("database connect: " . $this->mysqli->connect_error, 500);
+            throw new ApiException("database connect: " . $this->mysqli->connect_error, 500);
             return;
         }
         $this->query("SET CHARACTER SET UTF8");
@@ -50,7 +49,7 @@ class Database
             $prepared = $this->mysqli->prepare($query);
 
             if ($prepared === false) {
-                throw new HttpException("database query: " . $this->mysqli->error, 500);
+                throw new ApiException("database query: " . $this->mysqli->error, 500);
                 return;
             }
 
@@ -64,7 +63,7 @@ class Database
             
             $prepared->close();
         } catch (\Throwable $error) {
-            throw new HttpException("database query: " . $error->getMessage(), 500);
+            throw new ApiException("database query: " . $error->getMessage(), 500);
             return;
         }
 

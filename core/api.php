@@ -4,8 +4,6 @@ namespace Core;
 
 require_once __DIR__ . "/database.php";
 
-use Pecee\SimpleRouter\Exceptions\HttpException;
-
 use Jwt\JWT;
 use Jwt\JWTException;
 
@@ -81,7 +79,7 @@ class Token {
         $token = request()->getHeader("authorization");
 
         if (substr($token, 0, 7) !== "Bearer ") { // extract "Bearer "
-            throw new HttpException("bearer authorization not found");
+            throw new ApiException("bearer authorization not found");
         }
 
         $token = substr($token, 7); // length of "Bearer "

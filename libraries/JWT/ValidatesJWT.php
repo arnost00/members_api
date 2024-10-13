@@ -59,7 +59,7 @@ trait ValidatesJWT
             throw new JWTException('Invalid token: Unsupported header algo', static::ERROR_ALGO_UNSUPPORTED);
         }
 
-        // $this->validateKid($header);
+        $this->validateKid($header);
     }
 
     /**

@@ -3,16 +3,14 @@
 namespace Endpoints;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
-use Pecee\SimpleRouter\Exceptions\HttpException;
-use Manifest\Manifest;
 
 require_once __DIR__ . "/../controllers/content.php";
 require_once __DIR__ . "/../controllers/holders.php";
 
-require_once Manifest::$core_directory . "/api.php";
-require_once Manifest::$core_directory . "/endpoint.php";
-require_once Manifest::$core_directory . "/notify.php";
-require_once Manifest::$core_directory . "/logging.php";
+require_once \Manifest::$core_directory . "/api.php";
+require_once \Manifest::$core_directory . "/endpoint.php";
+require_once \Manifest::$core_directory . "/notify.php";
+require_once \Manifest::$core_directory . "/logging.php";
 
 use Core\Api;
 use Core\Endpoint;

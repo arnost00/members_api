@@ -4,10 +4,8 @@ namespace Core;
 
 require_once __DIR__ . "/curl.php";
 
-use Manifest\Manifest;
 use Jwt\JWT;
 use CurlRequest;
-use Pecee\SimpleRouter\Exceptions\HttpException;
 
 class Notifications {
     private static $aud = "https://oauth2.googleapis.com/token";
@@ -21,7 +19,7 @@ class Notifications {
 
     private static function adminsdk() {
         if (static::$_adminsdk === null) {
-            static::$_adminsdk = file_get_contents(Manifest::$firebase_adminsdk);
+            static::$_adminsdk = file_get_contents(\Manifest::$firebase_adminsdk);
             static::$_adminsdk = json_decode(static::$_adminsdk, true);
         }
 
@@ -56,7 +54,7 @@ class Notifications {
     
     private static function oauth2_token() {
         if (static::$_oauth2_token === null) {
-            $tokens = file_get_contents(Manifest::$firebase_tokens);
+            $tokens = file_get_contents(\Manifest::$firebase_tokens);
             $tokens = json_decode($tokens, true);
 
             if (isset($tokens["exp"]) && time() + static::$leeway < $tokens["exp"]) {
@@ -77,7 +75,7 @@ class Notifications {
                 static::$_oauth2_token = $curl->json()["access_token"];
 
                 // save new token
-                file_put_contents(Manifest::$firebase_tokens, json_encode([
+                file_put_contents(\Manifest::$firebase_tokens, json_encode([
                     "oauth2_token" => static::$_oauth2_token,
                     "exp" => static::$exp,
                 ], JSON_PRETTY_PRINT), LOCK_EX);
@@ -94,11 +92,14 @@ class Notifications {
         ]);
         
         if ($curl->is_error()) {
-            throw new HttpException($curl->json()["error"]["message"], 400);
+            throw new ApiException($curl->json()["error"]["message"], 400);
             return;
         }
 
-        response()->json($curl->json());
+        // do not use router's response()->json($curl->json()); for easier imports without router
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($curl->json());
+        exit(0);
     }
 
     public static function topics($token) {
@@ -111,7 +112,7 @@ class Notifications {
         echo $curl->server;
 
         // if ($curl->is_error()) {
-        //     throw new HttpException($curl->response, 400);
+        //     throw new ApiException($curl->response, 400);
         //     return;
         // }
 
@@ -119,6 +120,68 @@ class Notifications {
     }
 }
 
-// Notification manual
-// -------------------
-// Notifications::post(NotificationContent::create("Hello, World!", "Simple content."))
+
+class NotifyEvents {
+    /**
+     * No action happens.
+     */
+    static $BASIC = 0;
+
+    /**
+     * Should be used with `race_id` to open the correct race.
+     */
+    static $RACE = 1;
+}
+
+class NotifyContent {
+    public string $title = "";
+    public string $body = "";
+
+    // hex code required
+    public ?string $color = "#f76d1c";
+
+    // maximum 1 MB
+    public ?string $image = null;
+
+    public ?int $event = null;
+    public array $data = [];
+
+    public function __construct(string $title, string $body = "") {
+        $this->title = $title;
+        $this->body = $body;
+    }
+
+    public function race(int $race_id) {
+        $this->event = NotifyEvents::$RACE;
+        $this->data = [
+            ...$this->data,
+            "race_id" => $race_id,
+        ];
+    }
+
+    public function export(): array {
+        $data = $this->data;
+        $data["event"] = $this->event ?? NotifyEvents::$BASIC;
+
+        foreach ($data as &$value) {
+            $value = (string)$value;
+        } unset($value);
+
+        return [
+            "message" => [
+                "topic" => request()->current->clubname,
+                "notification" => [
+                    "title" => $this->title,
+                    "body" => $this->body,
+                ],
+                "android" => [
+                    "notification" => [
+                        "image" => $this->image,
+                        "color" => $this->color,
+                    ],
+                ],
+                "data" => $data,
+            ],
+        ];
+    }
+}

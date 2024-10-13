@@ -4,10 +4,9 @@ namespace Controllers;
 
 use Pecee\Http\middleware\IMiddleware;
 use Pecee\Http\Request;
-use Manifest\Manifest;
 
-require_once Manifest::$core_directory . "/api.php";
-require_once Manifest::$core_directory . "/clubs.php";
+require_once \Manifest::$core_directory . "/api.php";
+require_once \Manifest::$core_directory . "/clubs.php";
 require_once __DIR__ . "/../controllers/holders.php";
 
 use Core\Api;

@@ -1,43 +1,35 @@
 <?php
 
-namespace Endpoints;
+namespace ApiTwo;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 
-require_once __DIR__ . "/../controllers/holders.php";
-require_once __DIR__ . "/../controllers/middlewares.php";
-require_once __DIR__ . "/../controllers/utils.php";
+require_once __DIR__ . "/../boilerplate/middlewares.php";
+require_once __DIR__ . "/../boilerplate/session.php";
+require_once __DIR__ . "/../boilerplate/utils.php";
+require_once __DIR__ . "/../boilerplate/database.php";
+require_once __DIR__ . "/../boilerplate/endpoint.php";
+require_once __DIR__ . "/../boilerplate/notify.php";
+require_once __DIR__ . "/../boilerplate/config.php";
+require_once __DIR__ . "/../boilerplate/input.php";
 
-require_once \Manifest::$core_directory . "/api.php";
-require_once \Manifest::$core_directory . "/endpoint.php";
-require_once \Manifest::$core_directory . "/notify.php";
-
-use Core\Api;
 use Core\ApiException;
-use Core\Endpoint;
-use Core\Notifications;
-use Core\NotifyContent;
-
-use Controllers\RequireTokenMiddleware;
-use Controllers\Policies;
-use Controllers\Tables;
-use Controllers\Utils;
 
 class Race implements Endpoint
 {
     public static function init(): void {
-        Router::form("/races", [static::class, "races"]);
+        Router::get("/races", [static::class, "races"]);
         
-        Router::group(["prefix" => "/race"], function () {
+        Router::partialGroup("/race", function () {
             $race_id = ["race_id" => "[0-9]+"];
             $user_id = ["user_id" => "[0-9]+"];
 
-            Router::form("/", [static::class, "index"]);
-            Router::form("/{race_id}", [static::class, "detail"])->where($race_id);
-            Router::form("/{race_id}/redirect", [static::class, "redirect"])->where($race_id);
+            Router::form("/", [static::class, "warn_race_required"]);
+            Router::get("/{race_id}", [static::class, "detail"])->where($race_id);
+            Router::get("/{race_id}/redirect", [static::class, "redirect"])->where($race_id);
 
-            Router::group(["middleware" => RequireTokenMiddleware::class], function () use ($race_id, $user_id) {
-                Router::form("/{race_id}/relations", [static::class, "relations"])->where($race_id);
+            Router::group(["middleware" => LoginRequired::class], function () use ($race_id, $user_id) {
+                Router::get("/{race_id}/relations", [static::class, "relations"])->where($race_id);
                 Router::post("/{race_id}/signin/{user_id}", [static::class, "signin"])->where($race_id + $user_id);
                 Router::post("/{race_id}/signout/{user_id}", [static::class, "signout"])->where($race_id + $user_id);
                 Router::post("/{race_id}/notify", [static::class, "notify"])->where($race_id);
@@ -45,20 +37,20 @@ class Race implements Endpoint
         });
     }
 
-    public static function index() {
+    public static function warn_race_required() {
         throw new ApiException("race_id is required.", 404);
         return;
     }
 
     public static function redirect($race_id) {
         // status code 302, indicates that the resource requested has been temporarily moved
-        redirect(Api::config()->g_baseadr . "race_info_show.php?id_zav=" . $race_id);
+        redirect(Config::$g_baseadr . "race_info_show.php?id_zav=" . $race_id);
     }
 
     public static function races() {
         $current_date = Utils::getCurrentDate();
 
-        $output = Api::database()->query("SELECT `id` FROM `" . Tables::$RACE . "` WHERE `datum` >= ? || `datum2` >= ? ORDER BY `datum`", $current_date, $current_date);
+        $output = Database::query("SELECT `id` FROM `" . Tables::$TBL_RACE . "` WHERE `datum` >= ? || `datum2` >= ? ORDER BY `datum`", $current_date, $current_date);
 
         $result = [];
         while ($race = $output->fetch_assoc()) {
@@ -69,12 +61,10 @@ class Race implements Endpoint
     }
 
     public static function detail($race_id) {
-        $race_id = (int)$race_id;
-
         $result = self::__get_race_info($race_id);
 
         // provide information about signed in users
-        $output = Api::database()->query("SELECT zavxus.si_chip AS si_chip_temp, zavxus.*, user.* FROM `" . Tables::$ZAVXUS . "` AS zavxus, `" . Tables::$USER . "` AS user WHERE zavxus.id_user = user.id AND `id_zavod` = ?", $race_id);
+        $output = Database::query("SELECT zavxus.si_chip AS si_chip_temp, zavxus.*, user.* FROM `" . Tables::$TBL_ZAVXUS . "` AS zavxus, `" . Tables::$TBL_USER . "` AS user WHERE zavxus.id_user = user.id AND `id_zavod` = ?", $race_id);
 
         $result["everyone"] = [];
 
@@ -92,8 +82,11 @@ class Race implements Endpoint
                 "category" => $child["kat"],
                 "note" => $child["pozn"],
                 "note_internal" => $child["pozn_in"],
-                "transport" => $child["transport"], // value can be 0, 1, 2
-                "accommodation" => $child["ubytovani"], // value can be 0, 1, 2
+                // 0 = No; 1 = Yes; 2 = Auto Yes; 3 = Shared;
+                "transport" => $child["transport"],
+                "transport_shared" => $child["sedadel"],
+                // 0 = No; 1 = Yes; 2 = Auto Yes;
+                "accommodation" => $child["ubytovani"],
             ];
         }
 
@@ -102,11 +95,11 @@ class Race implements Endpoint
 
     public static function relations($race_id) {
         // select user_id (first) and its sheeps
-        $output = Api::database()->query("SELECT * FROM `" . Tables::$USER . "` WHERE `id` = ? OR `chief_id` = ? ORDER BY CASE WHEN `id` = ? THEN 1 ELSE 2 END", request()->user_id, request()->user_id, request()->user_id);
+        $output = Database::query("SELECT * FROM `" . Tables::$TBL_USER . "` WHERE `id` = ? OR `chief_id` = ? ORDER BY CASE WHEN `id` = ? THEN 1 ELSE 2 END", Session::$user_id, Session::$user_id, Session::$user_id);
         
         $result = [];
         while ($child = $output->fetch_assoc()) {
-            $zavxus = Api::database()->fetch_assoc("SELECT zavxus.* FROM `" . Tables::$ZAVXUS . "` AS zavxus, `" . Tables::$USER . "` AS user WHERE zavxus.id_user = user.id AND user.id = ? AND zavxus.id_zavod = ? LIMIT 1", $child["id"], $race_id);
+            $zavxus = Database::fetch_assoc("SELECT zavxus.* FROM `" . Tables::$TBL_ZAVXUS . "` AS zavxus, `" . Tables::$TBL_USER . "` AS user WHERE zavxus.id_user = user.id AND user.id = ? AND zavxus.id_zavod = ? LIMIT 1", $child["id"], $race_id);
 
             $result[] = [
                 "user_id" => $child["id"],
@@ -121,8 +114,11 @@ class Race implements Endpoint
                 "category" => @$zavxus["kat"],
                 "note" => @$zavxus["pozn"],
                 "note_internal" => @$zavxus["pozn_in"],
-                "transport" => @$zavxus["transport"], // value can be 0, 1, 2
-                "accommodation" => @$zavxus["ubytovani"], // value can be 0, 1, 2
+                // 0 = No; 1 = Yes; 2 = Auto Yes; 3 = Shared;
+                "transport" => @$zavxus["transport"],
+                "transport_shared" => @$zavxus["sedadel"],
+                // 0 = No; 1 = Yes; 2 = Auto Yes;
+                "accommodation" => @$zavxus["ubytovani"],
 
                 "is_signed_in" => $zavxus != null,
             ];
@@ -132,29 +128,30 @@ class Race implements Endpoint
     }
 
     public static function signin($race_id, $user_id) {
-        // the id of who is signing someone in
-        $chief_id = request()->user_id;
         // the id of who is being signed in
-        $user_id = (int)$user_id;
+        $input = new Input(required: true);
+        $input->add("category");
+        $input->add("note");
+        $input->add("note_internal");
+        $input->add("transport", filter: Input::$FILTER_BOOL);
+        $input->add("accommodation", filter: Input::$FILTER_BOOL);
+        $input = $input->collect();
 
-        $result = input()->all([
-            "category",
-            "note",
-            "note_internal",
-            "transport",
-            "accommodation",
-        ]);
-        foreach ($result as $key => $value) {
-            if ($value === null) {
-                throw new ApiException("Key $key is required in the request.", 404);
-                return;
+        $output = Database::fetch_assoc("SELECT transport FROM " . Tables::$TBL_RACE . " WHERE id = ?", $race_id);
+        
+        // if transport is not shared, disable transport_shared, use weak comparison
+        if ($output["transport"] == 3) {
+            // require transport_shared only when needed
+            $input["transport_shared"] = Input::key("transport_shared");
+            // if transport_shared is empty string, disable transport
+            if ($input["transport_shared"] === "") {
+                $input["transport"] = 0;
             }
+        } else {
+            $input["transport_shared"] = null;
         }
         
-        $result["transport"] = $result["transport"] ? 1 : 0;
-        $result["accommodation"] = $result["accommodation"] ? 1 : 0;
-        
-        self::__check_chief_and_user($chief_id, $user_id); 
+        self::__check_current_user_is_managing($user_id); 
         self::__check_locked_user($user_id);
 
         if (($termin = self::__timeToRegistration($race_id)) === 0) {
@@ -165,86 +162,68 @@ class Race implements Endpoint
         self::__check_cancelled_race($race_id);
 
         // check if the user is already signed in
-        $output = Api::database()->fetch_assoc("SELECT * FROM `" . Tables::$ZAVXUS . "` WHERE `id_zavod` = ? AND `id_user` = ? LIMIT 1", $race_id, $user_id);
+        $output = Database::fetch_assoc("SELECT * FROM `" . Tables::$TBL_ZAVXUS . "` WHERE `id_zavod` = ? AND `id_user` = ? LIMIT 1", $race_id, $user_id);
         if ($output === null) {
             // if not, create a new row with given values
-            Api::database()->query("INSERT INTO `" . Tables::$ZAVXUS . "` (`id_user`, `id_zavod`, `kat`, `pozn`, `pozn_in`, `transport`, `ubytovani`, `termin`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                $user_id, $race_id, $result["category"], $result["note"], $result["note_internal"], $result["transport"], $result["accommodation"], $termin);
+            Database::query("INSERT INTO `" . Tables::$TBL_ZAVXUS . "` (`id_user`, `id_zavod`, `kat`, `pozn`, `pozn_in`, `transport`, `sedadel`, `ubytovani`, `termin`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                $user_id, $race_id, $input["category"], $input["note"], $input["note_internal"], $input["transport"], $input["transport_shared"], $input["accommodation"], $termin);
         } else {
             // else, update the row
-            Api::database()->query("UPDATE `" . Tables::$ZAVXUS . "` SET `kat` = ?, `pozn` = ?, `pozn_in` = ?, `transport` = ?, `ubytovani` = ?, `termin` = ? WHERE `id` = ?",
-                $result["category"], $result["note"], $result["note_internal"], $result["transport"], $result["accommodation"], $termin, $output["id"]);
+            Database::query("UPDATE `" . Tables::$TBL_ZAVXUS . "` SET `kat` = ?, `pozn` = ?, `pozn_in` = ?, `transport` = ?, `sedadel` = ?, `ubytovani` = ?, `termin` = ? WHERE `id` = ?",
+                $input["category"], $input["note"], $input["note_internal"], $input["transport"], $input["transport_shared"], $input["accommodation"], $termin, $output["id"]);
         }
-        
-        response()->json([]);
     }
 
     public static function signout($race_id, $user_id) {
-        // the id of who is signing someone out
-        $chief_id = request()->user_id;
         // the id of who is being signed out
-        $user_id = (int)$user_id;
-
-        self::__check_chief_and_user($chief_id, $user_id);
+        self::__check_current_user_is_managing($user_id);
         self::__check_locked_user($user_id);
         self::__check_cancelled_race($race_id);
 
-        Api::database()->query("DELETE FROM `" . Tables::$ZAVXUS . "` WHERE `id_zavod` = ? AND `id_user` = ?", $race_id, $user_id);
-
-        response()->json([]);
+        Database::query("DELETE FROM `" . Tables::$TBL_ZAVXUS . "` WHERE `id_zavod` = ? AND `id_user` = ?", $race_id, $user_id);
     }
 
     public static function notify($race_id) {
-        $title = input()->find("title");
-        $body = input()->find("body");
+        $title = Input::key("title");
+        $body = Input::key("body");
+        $image = Input::key("image", required: false);
         
-        $image = input()->find("image");
-        
-        if ($title === null) {
-            throw new ApiException("Field 'title' is required.", 400);
-            return;
-        }
-        
-        if ($body === null) {
-            throw new ApiException("Field 'body' is required.", 400);
-            return;
-        }
-        
-        if ($image !== null && filter_var($image->getValue(), FILTER_VALIDATE_URL) === false) {
+        if ($image !== null && filter_var($image, FILTER_VALIDATE_URL) === false) {
             throw new ApiException("Field 'image' must be a valid URL or null.", 400);
             return;
         }
         
-        if (!Policies::is_big_manager(request()->user_id)) {
+        if (!Session::$policy_mng_big) {
             throw new ApiException("You must be at least big manager to send a notification.", 403);
             return;
         }
-
-        $content = new NotifyContent($title, $body);
-        $content->race($race_id);
-        $content->image = $image;
         
-        Notifications::send($content->export());
+        $content = new NotifyContent($title, $body);
+        $content->topic(Session::$clubname);
+        $content->custom_event(NotifyContent::$EVENT_RACE, $race_id);
+        $content->image($image);
+        
+        response()->json(Notifications::send($content->export()));
     }
 
     ///////////////
     // Utilities //
     ///////////////
 
-    private static function __check_chief_and_user($chief_id, $user_id) {
-        // raises error if chief is is not managing user
+    private static function __check_current_user_is_managing($user_id) {
+        // raises error if current user is is not managing user
 
-        if ($chief_id == $user_id) { // use == operator to accept str == int
+        if (Session::$user_id == $user_id) { // use == operator to accept str == int
             // the chief has obviously access to itself
             return true;
         }
 
-        if (!Policies::is_any_manager($chief_id)) {
+        if (!Session::$policy_mng_small) {
             throw new ApiException("You must be at least a small manager.", 401);
             return;
         }
     
-        $output = Api::database()->fetch_assoc("SELECT `id` FROM `" . Tables::$USER . "` WHERE `id` = ? AND `chief_id` = ? LIMIT 1", $user_id, $chief_id);
+        $output = Database::fetch_assoc("SELECT `id` FROM `" . Tables::$TBL_USER . "` WHERE `id` = ? AND `chief_id` = ? LIMIT 1", $user_id, Session::$user_id);
     
         if ($output === null) {
             throw new ApiException("The user you are trying to sign in has to be associated with you.", 401);
@@ -253,21 +232,21 @@ class Race implements Endpoint
     }
 
     private static function __check_locked_user($user_id) {
-        if (Api::database()->fetch_assoc("SELECT `entry_locked` FROM `" . Tables::$USER . "` WHERE `id` = ?", $user_id)["entry_locked"]) {
+        if (Database::fetch_assoc("SELECT `entry_locked` FROM `" . Tables::$TBL_USER . "` WHERE `id` = ?", $user_id)["entry_locked"]) {
             throw new ApiException("Your account is locked.", 403);
             return;
         }
     }
 
     private static function __check_cancelled_race($race_id) {
-        if (Api::database()->fetch_assoc("SELECT `cancelled` FROM `" . Tables::$RACE . "` WHERE `id` = ?", $race_id)["cancelled"] == 1) {
+        if (Database::fetch_assoc("SELECT `cancelled` FROM `" . Tables::$TBL_RACE . "` WHERE `id` = ?", $race_id)["cancelled"] == 1) {
             throw new ApiException("The race you are trying to sign in is cancelled.", 404);
             return;
         }
     }
 
     private static function __get_race_info($race_id) {
-        $race = Api::database()->fetch_assoc("SELECT * FROM " . Tables::$RACE . " WHERE `id` = ?", $race_id);
+        $race = Database::fetch_assoc("SELECT * FROM " . Tables::$TBL_RACE . " WHERE `id` = ?", $race_id);
 
         if ($race === null) {
             throw new ApiException("The race you are looking for does not exists.", 404);
@@ -284,16 +263,16 @@ class Race implements Endpoint
         if ($race["prihlasky5"] != 0 && $race["prihlasky"] > 4 ) $prihlasky[] = Utils::dateToISO($race["prihlasky5"]);
 
         $zebricek = [];
-        for($i=0; $i<Api::config()->g_zebricek_cnt; $i++) {
-            if (Api::config()->g_zebricek[$i]["id"] & $race["zebricek"]) {
-                $zebricek[] = Api::config()->g_zebricek[$i]["nm"];
+        for($i=0; $i<Enums::$g_zebricek_cnt; $i++) {
+            if (Enums::$g_zebricek[$i]["id"] & $race["zebricek"]) {
+                $zebricek[] = Enums::$g_zebricek[$i]["nm"];
             }
         }
         
         $sport = null;
-        for ($i=0; $i<Api::config()->g_racetype_cnt; $i++) {
-            if (Api::config()->g_racetype[$i]["enum"] == $race["typ0"]) {
-                $sport = Api::config()->g_racetype[$i]["nm"];
+        for ($i=0; $i<Enums::$g_racetype_cnt; $i++) {
+            if (Enums::$g_racetype[$i]["enum"] == $race["typ0"]) {
+                $sport = Enums::$g_racetype[$i]["nm"];
                 break;
             }
         }
@@ -317,17 +296,17 @@ class Race implements Endpoint
             "club" => $race["oddil"],
             "link" => $link,
             "place" => $race["misto"],
-            "type" => Api::config()->g_racetype0[$race["typ0"]],
+            "type" => Enums::$g_racetype0[$race["typ0"]],
             "sport" => $sport,
             "rankings" => $zebricek,
             "rank21" => $race["ranking"],
             "note" => $race["poznamka"],
             
-            // 0 = No; 1 = Yes; 2 = Auto Yes;
-            "transport" => Api::config()->g_enable_race_transport ? $race["transport"] : 0,
+            // 0 = No; 1 = Yes; 2 = Auto Yes; 3 = Shared;
+            "transport" => Config::$g_enable_race_transport ? $race["transport"] : 0,
             
-            // 0 = No; 1 = Yes; 2 = Auto Yes;
-            "accommodation" => Api::config()->g_enable_race_accommodation ? $race["ubytovani"] : 0,
+            // 0 = No; 1 = Yes; 2 = Auto Yes; 3 = Shared;
+            "accommodation" => Config::$g_enable_race_accommodation ? $race["ubytovani"] : 0,
             
             // explode returns [""] on empty list
             "categories" => $race["kategorie"] == "" ? [] : explode(";", $race["kategorie"]),
@@ -341,7 +320,7 @@ class Race implements Endpoint
         // 1 .. 5 - active term
         // 0 - any active term / cannot process	
         
-        $zaznam = Api::database()->fetch_assoc("SELECT `datum`, `prihlasky`, `prihlasky1`, `prihlasky2`, `prihlasky3`, `prihlasky4`, `prihlasky5` FROM `" . Tables::$RACE . "` WHERE `id` = ?", $race_id);
+        $zaznam = Database::fetch_assoc("SELECT `datum`, `prihlasky`, `prihlasky1`, `prihlasky2`, `prihlasky3`, `prihlasky4`, `prihlasky5` FROM `" . Tables::$TBL_RACE . "` WHERE `id` = ?", $race_id);
     
         if (Utils::getTimeToRace($zaznam["datum"]) <= 0) return 0;
         if ($zaznam["prihlasky"] == 0) return 1;

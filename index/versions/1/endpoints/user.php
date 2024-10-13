@@ -3,16 +3,15 @@
 namespace Endpoints;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
-use Pecee\SimpleRouter\Exceptions\HttpException;
-use Manifest\Manifest;
 
 require_once __DIR__ . "/../controllers/middlewares.php";
 require_once __DIR__ . "/../controllers/holders.php";
 
-require_once Manifest::$core_directory . "/api.php";
-require_once Manifest::$core_directory . "/endpoint.php";
+require_once \Manifest::$core_directory . "/api.php";
+require_once \Manifest::$core_directory . "/endpoint.php";
 
 use Core\Api;
+use Core\ApiException;
 use Core\Endpoint;
 
 use Controllers\RequireTokenMiddleware;
@@ -42,21 +41,21 @@ class User implements Endpoint
         $password = input()->find("password");
 
         if ($username === null || $password === null) {
-            throw new HttpException("Keys username or password are not set.", 400);
+            throw new ApiException("Keys username or password are not set.", 400);
         }
 
         $output = Api::database()->fetch_assoc("SELECT * FROM `" . Tables::$ACCOUNT . "` WHERE `login` = ? LIMIT 1", $username->getValue());
 
         if (!$output) {
-            throw new HttpException("Username does not exists.", 401);
+            throw new ApiException("Username does not exists.", 401);
         }
 
         if (!password_verify(md5($password->getValue()), $output["heslo"])) {
-            throw new HttpException("Wrong password.", 401);
+            throw new ApiException("Wrong password.", 401);
         }
 
         if ($output["locked"]) {
-            throw new HttpException("Your account is locked.", 401);
+            throw new ApiException("Your account is locked.", 401);
         }
 
         Api::database()->query("UPDATE `" . Tables::$ACCOUNT . "` SET `last_visit` = ? WHERE `id_users` = ?", time(), $output["id_users"]);
