@@ -84,7 +84,7 @@ class ContentRacesBlock {
 
                 $days_delta = (int)(abs($registration[0] - static::$current_date) / 86400);
 
-                if ($days_delta > $subscriber["daysbefore"]) {
+                if ($days_delta !== $subscriber["daysbefore"]) {
                     continue;
                 }
 
