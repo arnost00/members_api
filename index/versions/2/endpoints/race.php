@@ -257,10 +257,10 @@ class Race implements Endpoint
         if ($race["vicedenni"]) $dates[] = Utils::dateToISO($race["datum2"]); // add second date if exists
     
         $entries = [ Utils::dateToISO($race["prihlasky1"]) ]; // always provide entry
-        if ($race["prihlasky2"] != 0 && $race["prihlasky"] > 1 ) $prihlasky[] = Utils::dateToISO($race["prihlasky2"]);
-        if ($race["prihlasky3"] != 0 && $race["prihlasky"] > 2 ) $prihlasky[] = Utils::dateToISO($race["prihlasky3"]);
-        if ($race["prihlasky4"] != 0 && $race["prihlasky"] > 3 ) $prihlasky[] = Utils::dateToISO($race["prihlasky4"]);
-        if ($race["prihlasky5"] != 0 && $race["prihlasky"] > 4 ) $prihlasky[] = Utils::dateToISO($race["prihlasky5"]);
+        if ($race["prihlasky2"] != 0 && $race["prihlasky"] > 1 ) $entries[] = Utils::dateToISO($race["prihlasky2"]);
+        if ($race["prihlasky3"] != 0 && $race["prihlasky"] > 2 ) $entries[] = Utils::dateToISO($race["prihlasky3"]);
+        if ($race["prihlasky4"] != 0 && $race["prihlasky"] > 3 ) $entries[] = Utils::dateToISO($race["prihlasky4"]);
+        if ($race["prihlasky5"] != 0 && $race["prihlasky"] > 4 ) $entries[] = Utils::dateToISO($race["prihlasky5"]);
 
         $zebricek = [];
         for($i=0; $i<Enums::$g_zebricek_cnt; $i++) {
