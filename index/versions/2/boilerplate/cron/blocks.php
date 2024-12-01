@@ -7,6 +7,11 @@ require_once __DIR__ . "/../../boilerplate/notify.php";
 require_once __DIR__ . "/../../boilerplate/config.php";
 require_once __DIR__ . "/../../boilerplate/utils.php";
 
+function timestamps_days_delta(int $timestamp1, int $timestamp2) {
+    // add one day to include both endpoints
+    return 1 + (int)(abs($timestamp2 - $timestamp1) / 86400);
+}
+
 class ContentNewsBlock {
     public static $data;
 
@@ -82,9 +87,7 @@ class ContentRacesBlock {
                     continue;
                 }
 
-                $days_delta = (int)(abs($registration[0] - static::$current_date) / 86400);
-
-                if ($days_delta !== $subscriber["daysbefore"]) {
+                if (timestamps_days_delta($registration[0], static::$current_date) !== $subscriber["daysbefore"]) {
                     continue;
                 }
 
@@ -100,10 +103,8 @@ class ContentRacesBlock {
                 if ($registration[0] === 0) {
                     continue;
                 }
-
-                $days_delta = (int)(abs($registration[0] - static::$current_date) / 86400);
-
-                if ($days_delta !== 1) {
+                
+                if (timestamps_days_delta($registration[0], static::$current_date) !== 2) {
                     continue;
                 }
 
