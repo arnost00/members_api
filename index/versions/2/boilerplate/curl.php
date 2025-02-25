@@ -11,9 +11,9 @@ class CurlRequest {
         }, array_keys($headers), array_values($headers));
     }
 
-    public static function post($server, $payload="", $headers=[]) {
+    public static function post($server, $payload = "", $headers = []) {
         $response = new CurlResponse($server);
-        
+
         $curl = curl_init();
 
         curl_setopt($curl, CURLOPT_URL, $server);
@@ -21,7 +21,7 @@ class CurlRequest {
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        
+
         $response->server = $server;
         $response->response = curl_exec($curl);
         $response->status_code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
@@ -32,11 +32,11 @@ class CurlRequest {
         return $response;
     }
 
-    public static function get($server, $payload="", $headers=[]) {
+    public static function get($server, $payload = "", $headers = []) {
         $response = new CurlResponse($server);
-        
+
         $curl = curl_init();
-    
+
         curl_setopt($curl, CURLOPT_URL, $server);
         curl_setopt($curl, CURLOPT_HTTPHEADER, static::_convert_headers($headers));
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
@@ -83,11 +83,11 @@ class CurlResponse {
 
     function json() {
         $data = json_decode($this->response, true);
-        
+
         if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
             throw new ApiException(json_last_error_msg(), 500);
         }
-        
+
         return $data;
     }
 }

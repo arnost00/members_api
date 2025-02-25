@@ -12,11 +12,11 @@ use Core\ApiException;
 class Notifications {
     private static $aud = "https://oauth2.googleapis.com/token";
     private static $scope = "https://www.googleapis.com/auth/firebase.messaging";
-    
+
     private static $leeway = 120;
     private static $ttl = 3600;
     private static $exp;
-    
+
     private static $_adminsdk;
     private static $_jwt_token;
     private static $_oauth2_token;
@@ -29,16 +29,16 @@ class Notifications {
 
         return static::$_adminsdk;
     }
-    
+
     private static function jwt_token() {
         if (static::$_jwt_token === null) {
             // load jwt instance from private key
             $jwt = new JWT([
                 static::adminsdk()["private_key_id"] => openssl_get_privatekey(static::adminsdk()["private_key"]),
             ], "RS256");
-            
+
             $iat = time();
-            
+
             // expiration must be saved, required by static::oauth2_token()
             static::$exp = $iat + static::$ttl;
 
@@ -54,10 +54,10 @@ class Notifications {
                 "kid" => static::adminsdk()["private_key_id"],
             ]);
         }
-        
+
         return static::$_jwt_token;
     }
-    
+
     private static function oauth2_token() {
         if (static::$_oauth2_token === null) {
             $tokens = file_get_contents(\Manifest::$firebase_tokens);
@@ -109,7 +109,7 @@ class Notifications {
         $code = $response["error"]["code"];
         $status = $response["error"]["status"];
         $details = json_encode($response["error"]["details"], JSON_THROW_ON_ERROR);
-        
+
         throw new ApiException("Google API:", 500, "Google API ($code): $status. $message ($details)");
     }
 
@@ -175,10 +175,10 @@ class Notifications {
         return $result;
         */
     }
-    
+
     public static function send($payload) {
         $curl = curl_init();
-        
+
         curl_setopt($curl, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/orientacny-beh/messages:send");
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
@@ -187,21 +187,21 @@ class Notifications {
             "Content-Type: application/json",
             "Authorization: Bearer " . static::oauth2_token(),
         ]);
-        
+
         $response = curl_exec($curl);
         $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
 
         static::check_api_error($response, $curl);
-        
+
         curl_close($curl);
-        
+
         return $response;
     }
 
     public static function topics($token) {
         // DEBUG //
         $curl = curl_init();
-    
+
         curl_setopt($curl, CURLOPT_URL, "https://iid.googleapis.com/iid/info/" . $token . "?details=true");
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
         curl_setopt($curl, CURLOPT_POSTFIELDS, "");
@@ -254,7 +254,7 @@ class NotifyContent {
         if (!isset($this->content["message"]["notification"]["title"])) {
             throw new ApiException("FCM title is not set.", 500);
         }
-        
+
         if (!isset($this->content["message"]["notification"]["body"])) {
             throw new ApiException("FCM body is not set.", 500);
         }

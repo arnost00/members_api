@@ -17,7 +17,7 @@ class System implements Endpoint {
             Router::form("/", [static::class, "index"]);
             Router::get("/cron", [static::class, "cron"]);
             Router::post("/login", [static::class, "login"]);
-            
+
             Router::group(["prefix" => "/fcm_token", "middleware" => LoginRequired::class], function () {
                 Router::post("/update", [static::class, "fcm_token_update"]);
                 Router::post("/delete", [static::class, "fcm_token_delete"]);
@@ -32,15 +32,15 @@ class System implements Endpoint {
     public static function login() {
         $username = Input::key("username");
         $password = Input::key("password");
-        
+
         $output = Database::fetch_assoc("SELECT `id_users`, `heslo`, `locked` FROM `" . Tables::$TBL_ACCOUNT . "` WHERE `login` = ? LIMIT 1", $username);
-        
+
         if ($output === null) {
             throw new ApiException("Username does not exists.", 401);
         }
-        
+
         $user_id = $output["id_users"];
-        
+
         if ($output["locked"]) {
             throw new ApiException("Your account is locked.", 401);
         }
@@ -88,4 +88,4 @@ class System implements Endpoint {
         require_once __DIR__ . "/../boilerplate/cron/cron.php";
         Cron::start();
     }
-}   
+}

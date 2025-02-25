@@ -103,7 +103,7 @@ class ContentRacesBlock {
                 if ($registration[0] === 0) {
                     continue;
                 }
-                
+
                 if (timestamps_days_delta($registration[0], static::$current_date) !== 2) {
                     continue;
                 }
@@ -207,14 +207,14 @@ class ContentRacesBlock {
 
     public static function formatRace($child) {
         $date = $child["vicedenni"]
-        ? Utils::formatTimestamps($child["datum"], $child["datum2"])
-        : Utils::formatTimestamps($child["datum"]);
-                
+            ? Utils::formatTimestamps($child["datum"], $child["datum2"])
+            : Utils::formatTimestamps($child["datum"]);
+
         $title = $child["nazev"];
         $club = $child["oddil"];
 
         $registration = static::getCurrentRegistration($child, static::$current_date);
-        
+
         $termin = Utils::formatTimestamps($registration[0]);
         if ($registration[1] !== 0) $termin .= " / " . $registration[1];
 
@@ -248,19 +248,19 @@ class ContentRacesBlock {
         if ($row['prihlasky'] == 1) {
             return $row['prihlasky1'] >= $date ? [$row['prihlasky1'], 0] : [0, 0];
         }
-        if ($row['prihlasky'] >= 1 && $row['prihlasky1'] >= $date ) {
+        if ($row['prihlasky'] >= 1 && $row['prihlasky1'] >= $date) {
             return [$row['prihlasky1'], 1];
         }
-        if ($row['prihlasky'] >= 2 && $row['prihlasky2'] >= $date ) {
+        if ($row['prihlasky'] >= 2 && $row['prihlasky2'] >= $date) {
             return [$row['prihlasky2'], 2];
         }
-        if ($row['prihlasky'] >= 3 && $row['prihlasky3'] >= $date ) {
+        if ($row['prihlasky'] >= 3 && $row['prihlasky3'] >= $date) {
             return [$row['prihlasky3'], 3];
         }
-        if ($row['prihlasky'] >= 4 && $row['prihlasky4'] >= $date ) {
+        if ($row['prihlasky'] >= 4 && $row['prihlasky4'] >= $date) {
             return [$row['prihlasky4'], 4];
         }
-        if ($row['prihlasky'] >= 5 && $row['prihlasky5'] >= $date ) {
+        if ($row['prihlasky'] >= 5 && $row['prihlasky5'] >= $date) {
             return [$row['prihlasky5'], 5];
         }
         return [0, 0];
@@ -271,7 +271,7 @@ class ContentRacesBlock {
         if ($row['prihlasky'] == 1) {
             return $row['prihlasky1'] < $date ? [$row['prihlasky1'], 0] : [0, 0];
         }
-    
+
         if ($row['prihlasky'] >= 5 && $row['prihlasky5'] < $date) {
             return [$row['prihlasky5'], 5];
         }
@@ -287,7 +287,7 @@ class ContentRacesBlock {
         if ($row['prihlasky'] >= 1 && $row['prihlasky1'] < $date) {
             return [$row['prihlasky1'], 1];
         }
-        
+
         return [0, 0];
     }
 }
@@ -327,14 +327,14 @@ class ContentFinanceBlock {
                 }
             }
         }
-        
+
         $this->show_negative_table = $subscriber["active_finf"];
     }
 
     public function is_empty() {
         return !Config::$g_enable_finances || ($this->message === "" && !$this->show_negative_table);
     }
-    
+
     public function export_mail() {
         $content = "";
 
@@ -344,11 +344,11 @@ class ContentFinanceBlock {
 
         if ($this->show_negative_table) {
             $content .= "<p>Členové se záporným zůstatkem na účtu:</p><ul>";
-            
+
             foreach (static::$data_negative_table as $child) {
                 $content .= "<li>" . $child["jmeno"] . " " . $child["prijmeni"] . " (" . $child["fin_total"] . ")</li>";
             }
-            
+
             $content .= "</ul>";
         }
 
@@ -357,34 +357,34 @@ class ContentFinanceBlock {
 
     public function export_notify() {
         $queue = [];
-        
+
         if ($this->message) {
             $queue[] = new NotifyContent($this->message);
         }
 
         // finance table probably will not be implemented
-        
+
         return $queue;
     }
 
     public static function getAllUsersCurrentBalance() {
         $result = Database::query("SELECT u.id, hidden, prijmeni,jmeno, ifnull(f.sum_amount,0) sum_amount, (n.amount+f.sum_amount) total_amount, u.chief_pay FROM " . Tables::$TBL_USER . " u 
-            left join (select sum(fin.amount) sum_amount, id_users_user from ".Tables::$TBL_FINANCE." fin where (fin.storno is null) group by fin.id_users_user) f on u.id=f.id_users_user 
-            left join (select ui.chief_pay payer_id, ifnull(sum(fi.amount),0) amount from ".Tables::$TBL_USER." ui 
+            left join (select sum(fin.amount) sum_amount, id_users_user from " . Tables::$TBL_FINANCE . " fin where (fin.storno is null) group by fin.id_users_user) f on u.id=f.id_users_user 
+            left join (select ui.chief_pay payer_id, ifnull(sum(fi.amount),0) amount from " . Tables::$TBL_USER . " ui 
             left join " . Tables::$TBL_FINANCE . " fi on fi.id_users_user = ui.id where ui.chief_pay is not null and (fi.storno is null or fi.storno != 1) group by ui.chief_pay) n on u.id=n.payer_id 
             left join " . Tables::$TBL_FINANCE_TYPES . " ft on ft.id = u.finance_type
             group by u.id ORDER BY u.`sort_name` ASC;");
-        
+
         $data = [];
 
         while ($row = $result->fetch_assoc()) {
-            if (($row["chief_pay"] > 0 && $row["chief_pay"]<>$row["id"]) || $row["hidden"]) {
+            if (($row["chief_pay"] > 0 && $row["chief_pay"] <> $row["id"]) || $row["hidden"]) {
                 // pokud za nej plati nekdo jiny, vubec nebrat v potaz !
                 // nebo pokud je skryt
             } else {
                 $data[$row["id"]] = $row;
                 $data[$row["id"]]["fin_total"] = $row["sum_amount"];
-                
+
                 if ($row["total_amount"] != null) {
                     $data[$row["id"]]["fin_total"] = $row["total_amount"];
                 }

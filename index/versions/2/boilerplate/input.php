@@ -25,10 +25,14 @@ class Input {
 
     public static function validate($value, int | string | callable $filter) {
         switch (true) {
-            case is_int($filter): return filter_var($value, $filter) !== false;
-            case is_string($filter): return is_string($value) && preg_match($filter, $value);
-            case is_callable($filter): return call_user_func($filter, $value);
-            default: throw new ApiException("Internal server error.", 500, "Unrecognized filter type.");
+            case is_int($filter):
+                return filter_var($value, $filter) !== false;
+            case is_string($filter):
+                return is_string($value) && preg_match($filter, $value);
+            case is_callable($filter):
+                return call_user_func($filter, $value);
+            default:
+                throw new ApiException("Internal server error.", 500, "Unrecognized filter type.");
         }
     }
 
@@ -36,7 +40,7 @@ class Input {
         if (static::$data !== null) return;
 
         // initialize filter functions
-        static::$FILTER_ISO_DATE = function ($test) { 
+        static::$FILTER_ISO_DATE = function ($test) {
             return preg_match("/^(\d+)-(\d+)-(\d+)$/", $test, $groups) ? checkdate($groups[2], $groups[3], $groups[1]) : false;
         };
         static::$FILTER_BOOL = function ($test) {
@@ -102,11 +106,11 @@ class Input {
             if ($required) {
                 throw new ApiException("User has not permission to change '$key'.", 401, "User has no permission to change '$key' under '$permission' mask.");
             }
-            
+
             // no permission, do not collect result
             return;
         }
-        
+
         if ($filter !== null && !static::validate($value, $filter)) {
             // always raise error on invalid value
             throw new ApiException("Invalid value for '$key'.", 400);

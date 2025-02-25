@@ -5,7 +5,7 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 // use instead boot manager because of club dynamic loading
-$request_uri =& $_SERVER["REQUEST_URI"];
+$request_uri = &$_SERVER["REQUEST_URI"];
 if (strpos($request_uri, "/api/club/") === 0) {
     $request_uri = "/api/0/" . substr($request_uri, strlen("/api/club/"));
 }

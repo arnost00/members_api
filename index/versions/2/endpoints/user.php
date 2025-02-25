@@ -12,12 +12,11 @@ require_once __DIR__ . "/../boilerplate/config.php";
 
 use Core\ApiException;
 
-class User implements Endpoint
-{
+class User implements Endpoint {
     public static function init(): void {
         Router::partialGroup("/user", function () {
             $user_id = ["user_id" => "[0-9]+"];
-            
+
             Router::get("/{user_id}", [static::class, "show"])->where($user_id);
 
             Router::group(["middleware" => LoginRequired::class], function () use ($user_id) {
@@ -48,8 +47,7 @@ class User implements Endpoint
         response()->json($result);
     }
 
-    public static function managing($user_id)
-    {
+    public static function managing($user_id) {
         // TODO: unnecessary selects
         $output = Database::query("SELECT `id`, `jmeno`, `prijmeni`, `reg`, `si_chip` FROM `" . Tables::$TBL_USER . "` WHERE `id` = ? OR `chief_id` = ?", Session::$user_id, $user_id);
 
@@ -71,8 +69,7 @@ class User implements Endpoint
         response()->json($result);
     }
 
-    public static function data()
-    {
+    public static function data() {
         $output = Database::fetch_assoc("SELECT * FROM `" . Tables::$TBL_USER . "` WHERE `id` = ?", Session::$user_id);
 
         response()->json([
@@ -147,8 +144,10 @@ class User implements Endpoint
 
         // construct a SQL update query
         $query = "UPDATE `" . Tables::$TBL_USER . "` SET ";
-        $query.= join(", ", array_map(function ($key) {return "`" . $key . "` = ?";}, array_keys($input)));
-        $query.= " WHERE `id` = ?";
+        $query .= join(", ", array_map(function ($key) {
+            return "`" . $key . "` = ?";
+        }, array_keys($input)));
+        $query .= " WHERE `id` = ?";
 
         Database::query($query, ...[...array_values($input), Session::$user_id]);
 
@@ -163,7 +162,7 @@ class User implements Endpoint
         if ($result === null) {
             $result = static::__default_notify_values();
         }
-        
+
         function _parse_flags($value, $scheme) {
             $result = [];
             foreach ($scheme as $item) {
@@ -175,15 +174,15 @@ class User implements Endpoint
             }
             return $result;
         }
-        
+
         $finances_enabled = Config::$g_enable_finances;
-        
+
         response()->json([
             "notify_type" => _parse_flags($result["notify_type"], Enums::$g_notify_type_flag),
             "email" => $result["email"],
-            
+
             "send_news" => (bool)$result["active_news"],
-            
+
             // notify when race is about to expire
             "send_races" => (bool)$result["active_tf"],
             "days_before" => $result["daysbefore"],
@@ -201,7 +200,7 @@ class User implements Endpoint
             "send_finances" => $finances_enabled ? (bool)$result["active_fin"] : null,
             "send_finances_data" => $finances_enabled ? _parse_flags($result["fin_type"], Enums::$g_fin_mail_flag) : null,
             "financial_limit" => $finances_enabled ? $result["fin_limit"] : null,
-            
+
             // FINANCE ONLY
             // notify when member does not have money, finance only
             "send_member_minus" => ($finances_enabled && Session::$policy_fin) ? (bool)$result["active_finf"] : null,
@@ -213,7 +212,7 @@ class User implements Endpoint
 
     public static function notify_update() {
         $finances = Config::$g_enable_finances ? 0 : Session::$MASK_SADM;
-        
+
         $input = new Input();
         $input->add("notify_type", filter: Input::$FILTER_UINT);
         $input->add("email", filter: FILTER_VALIDATE_EMAIL);
@@ -268,7 +267,7 @@ class User implements Endpoint
             // if changes are not selected, clear selected changes options
             $input["ch_data"] = $defaults["ch_data"];
         }
-        
+
         if (isset($input["active_fin"]) && !$input["active_fin"]) {
             // if finances are not selected, clear selected finance options
             $input["fin_type"] = $defaults["fin_type"];
@@ -285,9 +284,11 @@ class User implements Endpoint
         } else {
             // input only provided values
             $query = "UPDATE `" . Tables::$TBL_MAILINFO . "` SET ";
-            $query.= join(", ", array_map(function ($key) {return "`" . $key . "` = ?";}, array_keys($input)));
-            $query.= " WHERE `id_user` = ?";
-            
+            $query .= join(", ", array_map(function ($key) {
+                return "`" . $key . "` = ?";
+            }, array_keys($input)));
+            $query .= " WHERE `id_user` = ?";
+
             Database::query($query, ...[...array_values($input), Session::$user_id]);
         }
 
@@ -298,7 +299,7 @@ class User implements Endpoint
 
     private static function __default_notify_values() {
         $output = Database::fetch_assoc("SELECT `email` FROM " . Tables::$TBL_USER . " WHERE `id` = ? LIMIT 1", Session::$user_id);
-        
+
         // use empty string when query fails
         $email = $output === null ? "" : $output["email"];
 

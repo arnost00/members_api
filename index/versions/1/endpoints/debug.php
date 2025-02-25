@@ -59,7 +59,7 @@ class Debug implements Endpoint {
 
         echo "SMALL MANAGER: " . Policies::$MNG_SMALL;
         echo "BIG MANAGER: " . Policies::$MNG_BIG;
-        
+
         return "<pre>" . json_encode($output, JSON_PRETTY_PRINT) . "</pre>";
     }
 
@@ -77,6 +77,5 @@ class Debug implements Endpoint {
         var_dump($child);
 
         var_dump($zavxus["si_chip"] ?: $child["si_chip"]);
-
     }
 }

@@ -14,11 +14,9 @@ use Core\Clubs;
 use Controllers\Tables;
 use Controllers\Policies;
 
-class LoaderMiddleware implements IMiddleware
-{
+class LoaderMiddleware implements IMiddleware {
     // loads club configurations into the enviroment
-    public function handle(Request $request): void
-    {
+    public function handle(Request $request): void {
         Clubs::import($request->current->clubname);
 
         // init tables and policies
@@ -27,11 +25,9 @@ class LoaderMiddleware implements IMiddleware
     }
 }
 
-class RequireTokenMiddleware implements IMiddleware
-{
+class RequireTokenMiddleware implements IMiddleware {
     // checks for token validity
-    public function handle(Request $request): void
-    {
+    public function handle(Request $request): void {
         // ignore if it is preflight
         if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
             return;

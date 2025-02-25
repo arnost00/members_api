@@ -30,7 +30,7 @@ class Session {
      *             └────── $policy_mng_big   (1 bit)
      */
     public static int $policy;
-    
+
     public static int $MASK_ANYONE    = 0b000000;
     public static int $MASK_NEWS      = 0b000001;
     public static int $MASK_REGS      = 0b000010;
@@ -66,9 +66,9 @@ class Session {
 
     public static function init() {
         $data = static::get_access_token();
-        
+
         static::$is_logged_in = $data !== null;
-                
+
         if (static::$is_logged_in) {
             if (!Input::validate($data["user_id"], Input::$FILTER_UINT)) {
                 throw new ApiException("Invalid token.", 401, "Invalid user_id inside token.");
@@ -100,7 +100,7 @@ class Session {
             static::$policy_mng_big = $result["policy_mng"] === Enums::$_MNG_BIG_INT_VALUE_;
             static::$policy_mng_small = $result["policy_mng"] === Enums::$_MNG_SMALL_INT_VALUE_ || static::$policy_mng_big;
         }
-        
+
         static::$policy = static::$policy_news
             | (static::$policy_regs << 1)
             | (static::$policy_fin << 2)
@@ -121,7 +121,7 @@ class Session {
         if (substr($header, 0, 7) !== "Bearer ") {
             throw new ApiException("Invalid format, expected 'Bearer ' prefix.", 401);
         }
-        
+
         return static::jwt()->decode(substr($header, 7));
     }
 

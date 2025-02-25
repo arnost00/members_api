@@ -87,7 +87,7 @@ class Enums {
     public static $g_racetype0;
     public static $g_racetype0_idx;
     public static $g_racetype0_cnt;
-    
+
     // Volby pro sdilenou dopravu
     public static $g_sedadel_cnt;
     public static $g_fin_mail_flag;

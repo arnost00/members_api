@@ -43,7 +43,7 @@ class Logging {
 
             [$timestamp, $identifier, $level, $data] = explode(" - ", $logline, 4);
             [$clubname, $ip] = explode("::", $identifier, 2);
-    
+
             $loglines[] = [
                 "timestamp" => $timestamp,
                 "clubname" => $clubname,
@@ -52,7 +52,7 @@ class Logging {
                 "data" => $data,
             ];
         }
-        
+
         return $loglines;
     }
 
@@ -70,7 +70,7 @@ class Logging {
     public static function warning($text) {
         return static::custom($text, static::$LEVEL_WARNING);
     }
-    
+
     public static function error($text) {
         return static::custom($text, static::$LEVEL_ERROR);
     }

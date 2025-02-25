@@ -28,7 +28,8 @@ Router::form("/clubs", function () {
 
 Router::partialGroup("/{clubname}", function ($clubname) {
     // whitelist only alphanumeric chars
-    if (!preg_match("/^\w+$/", $clubname)) {var_dump($clubname);
+    if (!preg_match("/^\w+$/", $clubname)) {
+        var_dump($clubname);
         throw new ApiException("The club you're looking for is as real as a teapot handling coffee. Try a different name!", 418);
         return;
     }
@@ -45,15 +46,15 @@ Router::partialGroup("/{clubname}", function ($clubname) {
     if (request()->current->is_release === false) {
         request()->debug = true;
     }
-    
+
     Router::group(["middleware" => LoaderMiddleware::class], function () {
         Router::form("/", function ($clubname) {
             return "<h1>Welcome, traveller!</h1><p>You have just landed on the REST APIv3 of <b>" . $clubname . "</b>.</p>\n<pre>" . json_encode(request()->current, JSON_PRETTY_PRINT) . "</pre>";
         });
-        
+
         User::init();
         Race::init();
         Debug::init();
     });
-// clubname must not be "clubs" to allow /clubs route
+    // clubname must not be "clubs" to allow /clubs route
 })->where(["clubname" => "(?!clubs)\w+"])->setPreflightRequestsEnabled(true);

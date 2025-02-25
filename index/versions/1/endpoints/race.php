@@ -23,11 +23,10 @@ use Controllers\Policies;
 use Controllers\Tables;
 use Controllers\Utils;
 
-class Race implements Endpoint
-{
+class Race implements Endpoint {
     public static function init(): void {
         Router::form("/races", [static::class, "races"]);
-        
+
         Router::group(["prefix" => "/race"], function () {
             $race_id = ["race_id" => "[0-9]+"];
             $user_id = ["user_id" => "[0-9]+"];
@@ -103,7 +102,7 @@ class Race implements Endpoint
     public static function relations($race_id) {
         // select user_id (first) and its sheeps
         $output = Api::database()->query("SELECT * FROM `" . Tables::$USER . "` WHERE `id` = ? OR `chief_id` = ? ORDER BY CASE WHEN `id` = ? THEN 1 ELSE 2 END", request()->user_id, request()->user_id, request()->user_id);
-        
+
         $result = [];
         while ($child = $output->fetch_assoc()) {
             $zavxus = Api::database()->fetch_assoc("SELECT zavxus.* FROM `" . Tables::$ZAVXUS . "` AS zavxus, `" . Tables::$USER . "` AS user WHERE zavxus.id_user = user.id AND user.id = ? AND zavxus.id_zavod = ? LIMIT 1", $child["id"], $race_id);
@@ -150,11 +149,11 @@ class Race implements Endpoint
                 return;
             }
         }
-        
+
         $result["transport"] = $result["transport"] ? 1 : 0;
         $result["accommodation"] = $result["accommodation"] ? 1 : 0;
-        
-        self::__check_chief_and_user($chief_id, $user_id); 
+
+        self::__check_chief_and_user($chief_id, $user_id);
         self::__check_locked_user($user_id);
 
         if (($termin = self::__timeToRegistration($race_id)) === 0) {
@@ -168,14 +167,31 @@ class Race implements Endpoint
         $output = Api::database()->fetch_assoc("SELECT * FROM `" . Tables::$ZAVXUS . "` WHERE `id_zavod` = ? AND `id_user` = ? LIMIT 1", $race_id, $user_id);
         if ($output === null) {
             // if not, create a new row with given values
-            Api::database()->query("INSERT INTO `" . Tables::$ZAVXUS . "` (`id_user`, `id_zavod`, `kat`, `pozn`, `pozn_in`, `transport`, `ubytovani`, `termin`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                $user_id, $race_id, $result["category"], $result["note"], $result["note_internal"], $result["transport"], $result["accommodation"], $termin);
+            Api::database()->query(
+                "INSERT INTO `" . Tables::$ZAVXUS . "` (`id_user`, `id_zavod`, `kat`, `pozn`, `pozn_in`, `transport`, `ubytovani`, `termin`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                $user_id,
+                $race_id,
+                $result["category"],
+                $result["note"],
+                $result["note_internal"],
+                $result["transport"],
+                $result["accommodation"],
+                $termin
+            );
         } else {
             // else, update the row
-            Api::database()->query("UPDATE `" . Tables::$ZAVXUS . "` SET `kat` = ?, `pozn` = ?, `pozn_in` = ?, `transport` = ?, `ubytovani` = ?, `termin` = ? WHERE `id` = ?",
-                $result["category"], $result["note"], $result["note_internal"], $result["transport"], $result["accommodation"], $termin, $output["id"]);
+            Api::database()->query(
+                "UPDATE `" . Tables::$ZAVXUS . "` SET `kat` = ?, `pozn` = ?, `pozn_in` = ?, `transport` = ?, `ubytovani` = ?, `termin` = ? WHERE `id` = ?",
+                $result["category"],
+                $result["note"],
+                $result["note_internal"],
+                $result["transport"],
+                $result["accommodation"],
+                $termin,
+                $output["id"]
+            );
         }
-        
+
         response()->json([]);
     }
 
@@ -197,24 +213,24 @@ class Race implements Endpoint
     public static function notify($race_id) {
         $title = input()->find("title");
         $body = input()->find("body");
-        
+
         $image = input()->find("image");
-        
+
         if ($title === null) {
             throw new ApiException("Field 'title' is required.", 400);
             return;
         }
-        
+
         if ($body === null) {
             throw new ApiException("Field 'body' is required.", 400);
             return;
         }
-        
+
         if ($image !== null && filter_var($image->getValue(), FILTER_VALIDATE_URL) === false) {
             throw new ApiException("Field 'image' must be a valid URL or null.", 400);
             return;
         }
-        
+
         if (!Policies::is_big_manager(request()->user_id)) {
             throw new ApiException("You must be at least big manager to send a notification.", 403);
             return;
@@ -223,7 +239,7 @@ class Race implements Endpoint
         $content = new NotifyContent($title, $body);
         $content->race($race_id);
         $content->image = $image;
-        
+
         Notifications::send($content->export());
     }
 
@@ -243,9 +259,9 @@ class Race implements Endpoint
             throw new ApiException("You must be at least a small manager.", 401);
             return;
         }
-    
+
         $output = Api::database()->fetch_assoc("SELECT `id` FROM `" . Tables::$USER . "` WHERE `id` = ? AND `chief_id` = ? LIMIT 1", $user_id, $chief_id);
-    
+
         if ($output === null) {
             throw new ApiException("The user you are trying to sign in has to be associated with you.", 401);
             return;
@@ -273,45 +289,45 @@ class Race implements Endpoint
             throw new ApiException("The race you are looking for does not exists.", 404);
             return;
         }
-    
-        $dates = [ Utils::dateToISO($race["datum"]) ]; // always provide date
+
+        $dates = [Utils::dateToISO($race["datum"])]; // always provide date
         if ($race["vicedenni"]) $dates[] = Utils::dateToISO($race["datum2"]); // add second date if exists
-    
-        $entries = [ Utils::dateToISO($race["prihlasky1"]) ]; // always provide entry
-        if ($race["prihlasky2"] != 0 && $race["prihlasky"] > 1 ) $prihlasky[] = Utils::dateToISO($race["prihlasky2"]);
-        if ($race["prihlasky3"] != 0 && $race["prihlasky"] > 2 ) $prihlasky[] = Utils::dateToISO($race["prihlasky3"]);
-        if ($race["prihlasky4"] != 0 && $race["prihlasky"] > 3 ) $prihlasky[] = Utils::dateToISO($race["prihlasky4"]);
-        if ($race["prihlasky5"] != 0 && $race["prihlasky"] > 4 ) $prihlasky[] = Utils::dateToISO($race["prihlasky5"]);
+
+        $entries = [Utils::dateToISO($race["prihlasky1"])]; // always provide entry
+        if ($race["prihlasky2"] != 0 && $race["prihlasky"] > 1) $prihlasky[] = Utils::dateToISO($race["prihlasky2"]);
+        if ($race["prihlasky3"] != 0 && $race["prihlasky"] > 2) $prihlasky[] = Utils::dateToISO($race["prihlasky3"]);
+        if ($race["prihlasky4"] != 0 && $race["prihlasky"] > 3) $prihlasky[] = Utils::dateToISO($race["prihlasky4"]);
+        if ($race["prihlasky5"] != 0 && $race["prihlasky"] > 4) $prihlasky[] = Utils::dateToISO($race["prihlasky5"]);
 
         $zebricek = [];
-        for($i=0; $i<Api::config()->g_zebricek_cnt; $i++) {
+        for ($i = 0; $i < Api::config()->g_zebricek_cnt; $i++) {
             if (Api::config()->g_zebricek[$i]["id"] & $race["zebricek"]) {
                 $zebricek[] = Api::config()->g_zebricek[$i]["nm"];
             }
         }
-        
+
         $sport = null;
-        for ($i=0; $i<Api::config()->g_racetype_cnt; $i++) {
+        for ($i = 0; $i < Api::config()->g_racetype_cnt; $i++) {
             if (Api::config()->g_racetype[$i]["enum"] == $race["typ0"]) {
                 $sport = Api::config()->g_racetype[$i]["nm"];
                 break;
             }
         }
-        
+
         $link = $race["odkaz"];
         // https://stackoverflow.com/a/14701491/14900791
         if ($link && parse_url(ltrim($link, "/"), PHP_URL_SCHEME) === null) {
             // guess protocol
             $link = "http://" . $link;
         }
-        
+
         return [
             "race_id" => $race["id"],
-            
+
             "dates" => $dates,
             "entries" => $entries,
             "name" => $race["nazev"],
-            
+
             // not sure cancelled is string, use weak comparision
             "cancelled" => $race["cancelled"] == 1,
             "club" => $race["oddil"],
@@ -322,13 +338,13 @@ class Race implements Endpoint
             "rankings" => $zebricek,
             "rank21" => $race["ranking"],
             "note" => $race["poznamka"],
-            
+
             // 0 = No; 1 = Yes; 2 = Auto Yes;
             "transport" => Api::config()->g_enable_race_transport ? $race["transport"] : 0,
-            
+
             // 0 = No; 1 = Yes; 2 = Auto Yes;
             "accommodation" => Api::config()->g_enable_race_accommodation ? $race["ubytovani"] : 0,
-            
+
             // explode returns [""] on empty list
             "categories" => $race["kategorie"] == "" ? [] : explode(";", $race["kategorie"]),
         ];
@@ -336,23 +352,21 @@ class Race implements Endpoint
 
     private static function __timeToRegistration($race_id) {
         // returns a registration state
-        
+
         // For reg/unreg
         // 1 .. 5 - active term
         // 0 - any active term / cannot process	
-        
+
         $zaznam = Api::database()->fetch_assoc("SELECT `datum`, `prihlasky`, `prihlasky1`, `prihlasky2`, `prihlasky3`, `prihlasky4`, `prihlasky5` FROM `" . Tables::$RACE . "` WHERE `id` = ?", $race_id);
-    
+
         if (Utils::getTimeToRace($zaznam["datum"]) <= 0) return 0;
         if ($zaznam["prihlasky"] == 0) return 1;
-        if (Utils::getTimeToReg($zaznam["prihlasky1"]) != -1 ) return 1;
-        if ($zaznam["prihlasky"] > 1 && Utils::getTimeToReg($zaznam["prihlasky2"]) != -1 ) return 2;
-        if ($zaznam["prihlasky"] > 2 && Utils::getTimeToReg($zaznam["prihlasky3"]) != -1 ) return 3;
-        if ($zaznam["prihlasky"] > 3 && Utils::getTimeToReg($zaznam["prihlasky4"]) != -1 ) return 4;
-        if ($zaznam["prihlasky"] > 4 && Utils::getTimeToReg($zaznam["prihlasky5"]) != -1 ) return 5;
-    
+        if (Utils::getTimeToReg($zaznam["prihlasky1"]) != -1) return 1;
+        if ($zaznam["prihlasky"] > 1 && Utils::getTimeToReg($zaznam["prihlasky2"]) != -1) return 2;
+        if ($zaznam["prihlasky"] > 2 && Utils::getTimeToReg($zaznam["prihlasky3"]) != -1) return 3;
+        if ($zaznam["prihlasky"] > 3 && Utils::getTimeToReg($zaznam["prihlasky4"]) != -1) return 4;
+        if ($zaznam["prihlasky"] > 4 && Utils::getTimeToReg($zaznam["prihlasky5"]) != -1) return 5;
+
         return 0;
     }
-};    
-
-
+};

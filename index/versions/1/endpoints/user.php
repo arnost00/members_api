@@ -18,8 +18,7 @@ use Controllers\RequireTokenMiddleware;
 use Controllers\Tables;
 use Controllers\Policies;
 
-class User implements Endpoint
-{
+class User implements Endpoint {
     public static function init(): void {
         Router::group(["prefix" => "/user"], function () {
             $user_id = ["user_id" => "[0-9]+"];
@@ -35,8 +34,7 @@ class User implements Endpoint
         });
     }
 
-    public static function login()
-    {
+    public static function login() {
         $username = input()->find("username");
         $password = input()->find("password");
 
@@ -92,8 +90,7 @@ class User implements Endpoint
         response()->json($result);
     }
 
-    public static function managing($user_id)
-    {
+    public static function managing($user_id) {
         // TODO: unnecessary selects
         $output = Api::database()->query("SELECT `id`, `jmeno`, `prijmeni`, `reg`, `si_chip` FROM `" . Tables::$USER . "` WHERE `id` = ? OR `chief_id` = ?", request()->user_id, $user_id);
 
@@ -115,8 +112,7 @@ class User implements Endpoint
         response()->json($result);
     }
 
-    public static function data()
-    {
+    public static function data() {
         $output = Api::database()->fetch_assoc("SELECT * FROM `" . Tables::$USER . "` WHERE `id` = ?", request()->user_id);
 
         response()->json([
@@ -171,17 +167,17 @@ class User implements Endpoint
             "phone"         => ["tel_mobil",    true],
             "phone_home"    => ["tel_domu",     true],
             "phone_work"    => ["tel_zam",      true],
-            
+
             "registration_number" => ["reg",    false],
             "chip_number"   => ["si_chip",      true],
-            
+
             "licence_ob"    => ["lic",          true],
             "licence_lob"   => ["lic_lob",      true],
             "licence_mtbo"  => ["lic_mtbo",     true],
-            
+
             "is_hidden"     => ["hidden",       false],
         ];
-            
+
         $manager_access = Policies::is_any_manager(request()->user_id);
         $push_data = [];
         foreach (input()->all() as $api_key_name => $value) {
@@ -218,8 +214,10 @@ class User implements Endpoint
 
         // construct a SQL update query
         $query = "UPDATE `" . Tables::$USER . "` SET ";
-        $query.= join(", ", array_map(function ($key) {return "`" . $key . "` = ?";}, array_keys($push_data)));
-        $query.= " WHERE id=?";
+        $query .= join(", ", array_map(function ($key) {
+            return "`" . $key . "` = ?";
+        }, array_keys($push_data)));
+        $query .= " WHERE id=?";
 
         Api::database()->query($query, ...[...array_values($push_data), request()->user_id]);
 

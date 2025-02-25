@@ -25,14 +25,14 @@ class Notifications {
 
         return static::$_adminsdk;
     }
-    
+
     private static function jwt_token() {
         if (static::$_jwt_token === null) {
             // load jwt instance from private key
             $jwt = new JWT(openssl_get_privatekey(static::adminsdk()["private_key"]), "RS256");
-            
+
             $iat = time();
-            
+
             // expiration must be saved, required by static::oauth2_token()
             static::$exp = $iat + static::$ttl;
 
@@ -48,10 +48,10 @@ class Notifications {
                 "kid" => static::adminsdk()["private_key_id"],
             ]);
         }
-        
+
         return static::$_jwt_token;
     }
-    
+
     private static function oauth2_token() {
         if (static::$_oauth2_token === null) {
             $tokens = file_get_contents(\Manifest::$firebase_tokens);
@@ -59,7 +59,7 @@ class Notifications {
 
             if (isset($tokens["exp"]) && time() + static::$leeway < $tokens["exp"]) {
                 // token is still valid
-    
+
                 static::$exp = $tokens["exp"];
                 static::$_oauth2_token = $tokens["oauth2_token"];
             } else {
@@ -84,13 +84,13 @@ class Notifications {
 
         return static::$_oauth2_token;
     }
-    
+
     public static function send($payload) {
         $curl = CurlRequest::post("https://fcm.googleapis.com/v1/projects/orientacny-beh/messages:send", json_encode($payload), [
             "Content-Type" => "application/json",
             "Authorization" => "Bearer " . static::oauth2_token(),
         ]);
-        
+
         if ($curl->is_error()) {
             throw new ApiException($curl->json()["error"]["message"], 400);
             return;
@@ -165,7 +165,8 @@ class NotifyContent {
 
         foreach ($data as &$value) {
             $value = (string)$value;
-        } unset($value);
+        }
+        unset($value);
 
         return [
             "message" => [

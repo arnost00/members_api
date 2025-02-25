@@ -14,13 +14,12 @@ class Database {
         if (static::$_mysqli === null) {
             mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
             register_shutdown_function([static::class, "close"]);
-            
+
             // initialize
             static::$_mysqli = new \mysqli(Config::$g_dbserver, Config::$g_dbuser, Config::$g_dbpass, Config::$g_dbname, Config::$g_dbport);
 
             // set charset to prevent decoding errors
             static::query("SET CHARACTER SET UTF8");
-
         }
 
         return static::$_mysqli;

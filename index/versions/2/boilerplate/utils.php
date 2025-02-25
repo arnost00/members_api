@@ -34,20 +34,20 @@ class Utils {
     }
 
     public static function getTimeToReg($entry_date) {
-            // 90000 = 25 * 60 * 60 - posun terminu prihlasek o 2 hodiny navic, kvuli time() ktery vraci UTC je tam +25 hodin
-            $entry_date += 90000;
-            
-            // puvodni pred pridanim 2 hodin navic
-            //	$diff = (int)(($t_p) - GetCurrentDate());
-            
-            $diff = (int)(($entry_date) - time());
-            if ($diff > 0) {
-                $diff = static::secondsToDays($diff);
-            } else if ($diff < 0) {
-                $diff = -1;
-            }
-            
-            return $diff;
+        // 90000 = 25 * 60 * 60 - posun terminu prihlasek o 2 hodiny navic, kvuli time() ktery vraci UTC je tam +25 hodin
+        $entry_date += 90000;
+
+        // puvodni pred pridanim 2 hodin navic
+        //	$diff = (int)(($t_p) - GetCurrentDate());
+
+        $diff = (int)(($entry_date) - time());
+        if ($diff > 0) {
+            $diff = static::secondsToDays($diff);
+        } else if ($diff < 0) {
+            $diff = -1;
+        }
+
+        return $diff;
     }
 
     public static function secondsToDays($seconds) {

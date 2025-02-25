@@ -33,7 +33,7 @@ Router::group(["prefix" => "/api/"], function () {
         if (!preg_match("/^\d+$/", $version)) {
             throw new ApiException("I'm a teapot!", 418);
         }
-        
+
         if (!@(include Manifest::$versions_directory . "/" . $version . "/autoload.php")) {
             throw new ApiException("Oops! Looks like the API version you're searching for is playing hide and seek with us. Please check if it slipped into another dimension or try a different version!", 404);
         }

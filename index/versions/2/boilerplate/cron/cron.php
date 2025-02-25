@@ -18,21 +18,21 @@ class Cron {
 
     public static function mailinfo_notify() {
         $subscribers = Database::fetch_assoc_all("SELECT * FROM " . Tables::$TBL_MAILINFO . " ORDER BY `id`");
-        
+
         if (count($subscribers) === 0) {
             return;
         }
 
         $tokens = Database::fetch_assoc_all("SELECT `mailinfo`.`id_user`, `tokens`.`fcm_token` FROM `" . Tables::$TBL_MAILINFO . "` AS `mailinfo` LEFT JOIN  `" . Tables::$TBL_TOKENS . "` AS `tokens` ON `mailinfo`.`id_user` = `tokens`.`user_id` WHERE (`mailinfo`.`notify_type` & ?) != 0;", Enums::$g_notify_type_flag[1]["id"]);
 
-        $mail = new PHPMailer(true);        
+        $mail = new PHPMailer(true);
         $mail->Host = Config::$g_mail_smtp_host;
         $mail->Username = Config::$g_mail_smtp_user;
         $mail->Password = Config::$g_mail_smtp_pswd;
         $mail->Port = Config::$g_mail_smtp_port;
         $mail->SMTPAuth = Config::$g_mail_smtp_auth;
         $mail->SMTPSecure = Config::$g_mail_smtp_secure;
-        
+
         $mail->isSMTP();
         $mail->isHTML();
         $mail->setFrom(Config::$g_mail_from, Config::$g_fullname);
@@ -42,7 +42,7 @@ class Cron {
 
         $mail_queue = [];
         $notify_queue = [];
-        
+
         foreach ($subscribers as $subscriber) {
             $news = new ContentNewsBlock($subscriber);
             $races = new ContentRacesBlock($subscriber);
@@ -56,7 +56,7 @@ class Cron {
                 $body = "<!DOCTYPE html><html><body>";
                 $body .= "<h2>Vybrané informace o termínech a změnách v příhláškovém systému " . Config::$g_shortcut . "</h2>\n";
                 $body .= "<hr />";
-                
+
                 $body .= $news->export_mail();
                 $body .= $races->export_mail();
                 $body .= $finance->export_mail();
@@ -88,7 +88,7 @@ class Cron {
 
         $report = [];
         $response = [];
-        
+
         foreach ($tokens as ["id_user" => $user_id, "fcm_token" => $token]) {
             if ($token === null) {
                 $report[] = "Missing token for '$user_id'.";
@@ -102,7 +102,7 @@ class Cron {
             foreach ($notify_queue[$user_id] as $content) {
                 // content have to be passed as an NotifyContent instance so we can set the token
                 $content->token($token);
-                
+
                 // send notification
                 $response[] = Notifications::send($content->export());
             }

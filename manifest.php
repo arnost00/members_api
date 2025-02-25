@@ -6,7 +6,7 @@ class Manifest {
         "mbm",
         "pbm",
         "tbm",
-    //  "ubm",
+        //  "ubm",
         "zbm",
         "spe",
         "spt",
@@ -15,10 +15,10 @@ class Manifest {
     // path for each club, for example:
     // $path_to_clubs . $clubname . "/cfg/_cfg.php";
     public static $path_to_clubs = __DIR__ . "/../";
-    
+
     // firebase adminsdk file from firebase
     public static $firebase_adminsdk = __DIR__ . "/.secrets/orientacny-beh-firebase-adminsdk-5cqvu-4f9fd5b2da.json";
-    
+
     // where current firebase token should be stored
     public static $firebase_tokens = __DIR__ . "/.secrets/orientacny-beh-firebase-tokens.json";
 

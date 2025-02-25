@@ -74,7 +74,7 @@ class Clubs {
                 throw new ApiException("Cannot load configuration file", 500, "Configuration file '" . $file . "' cannot be imported.");
             }
         }
-        
+
         // do not worry, this is not as scary as it seems
         foreach (Feed::$feed as $cls) {
             foreach (array_keys(get_class_vars($cls)) as $key) {

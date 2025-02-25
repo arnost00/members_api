@@ -2,12 +2,10 @@
 
 namespace Controllers;
 
-class Utils
-{
+class Utils {
     private static ?int $currentDate = null;
 
-    public static function getCurrentDate()
-    {
+    public static function getCurrentDate() {
         if (static::$currentDate !== null) {
             return static::$currentDate;
         }
@@ -23,13 +21,11 @@ class Utils
         return static::$currentDate;
     }
 
-    public static function dateToISO($date)
-    {
+    public static function dateToISO($date) {
         return @date("Y-m-d", $date);
     }
 
-    public static function getTimeToRace($race_date)
-    {
+    public static function getTimeToRace($race_date) {
         $diff = (int)($race_date - static::getCurrentDate());
 
         if ($diff > 0) {
@@ -41,25 +37,23 @@ class Utils
         return $diff;
     }
 
-    public static function getTimeToReg($entry_date)
-    {
-            // 90000 = 25 * 60 * 60 - posun terminu prihlasek o 2 hodiny navic, kvuli time() ktery vraci UTC je tam +25 hodin
-            $entry_date += 90000;
-            
-            // puvodni pred pridanim 2 hodin navic
-            //	$diff = (int)(($t_p) - GetCurrentDate());
-            
-            $diff = (int)(($entry_date) - time());
-            if ($diff > 0)
-                $diff = static::secondsToDays($diff);
-            else if ($diff < 0)
-                $diff = -1;
-            
-            return $diff;
+    public static function getTimeToReg($entry_date) {
+        // 90000 = 25 * 60 * 60 - posun terminu prihlasek o 2 hodiny navic, kvuli time() ktery vraci UTC je tam +25 hodin
+        $entry_date += 90000;
+
+        // puvodni pred pridanim 2 hodin navic
+        //	$diff = (int)(($t_p) - GetCurrentDate());
+
+        $diff = (int)(($entry_date) - time());
+        if ($diff > 0)
+            $diff = static::secondsToDays($diff);
+        else if ($diff < 0)
+            $diff = -1;
+
+        return $diff;
     }
 
-    public static function secondsToDays($seconds)
-    {
+    public static function secondsToDays($seconds) {
         // 86400 = 24 * 60 * 60
         return floor($seconds / 86400);
     }

@@ -70,8 +70,7 @@ class Token {
         return $this->jwt->encode($array);
     }
 
-    public function decode($array)
-    {
+    public function decode($array) {
         return $this->jwt->decode($array);
     }
 
