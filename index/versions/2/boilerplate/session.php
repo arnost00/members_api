@@ -67,16 +67,27 @@ class Session {
     public static function init() {
         $data = static::get_access_token();
 
-        static::$is_logged_in = $data !== null;
-
-        if (static::$is_logged_in) {
+        if ($data !== null) {
             if (!Input::validate($data["user_id"], Input::$FILTER_UINT)) {
                 throw new ApiException("Invalid token.", 401, "Invalid user_id inside token.");
             }
 
             static::$user_id = (int)$data["user_id"];
+
+            $output = Database::fetch_assoc("SELECT `locked` FROM `" . Tables::$TBL_ACCOUNT . "` WHERE `id_users` = ?", static::$user_id);
+
+            if ($output === null) {
+                throw new ApiException("The account does not exists.", 401);
+            }
+
+            if ($output["locked"]) {
+                throw new ApiException("You account is locked.", 401);
+            }
+
             static::pull_policy_by_user_id(static::$user_id);
         }
+
+        static::$is_logged_in = $data !== null;
     }
 
     public static function pull_policy_by_user_id($user_id) {
