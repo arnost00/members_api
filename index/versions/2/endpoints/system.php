@@ -58,6 +58,7 @@ class System implements Endpoint {
         response()->json([
             "access_token" => Session::generate_access_token($user_id, $expiration),
             "expiration" => $expiration,
+            "user_id" => $user_id,
             "policies" => [
                 "policy_adm" => Session::$policy_adm,
                 "policy_sadm" => Session::$policy_sadm,
