@@ -1,6 +1,8 @@
 # ignore content of directories starting with a dot,
 # but keep the directories themselves
 .*/**
+!.vscode/
+!.vscode/**
 !.*/.gitkeep
 !.*/README.md
 
