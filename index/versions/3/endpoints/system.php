@@ -62,7 +62,7 @@ class System implements Endpoint {
         Session::pull_policy_by_user_id($output["id_users"]);
 
         // expires in 90 days
-        $expiration = time() + 2 * 86400;
+        $expiration = time() + 90 * 86400;
 
         // generate device uuid
         $device = openssl_random_pseudo_bytes(16);

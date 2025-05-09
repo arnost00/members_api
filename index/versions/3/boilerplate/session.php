@@ -71,8 +71,13 @@ class Session {
     }
 
     public static function login_from_token($array) {
-        static::$user_id = (int)$array["user_id"];
-        static::$device = $array["device"];
+        try {
+            static::$user_id = (int)$array["user_id"];
+            static::$device = $array["device"];
+        } catch (\Throwable $e) {
+            throw new ApiException("Token is not in expected format. Please sign-in again.", 401, $e->getMessage());
+        }
+
         static::pull_policy_by_user_id(static::$user_id);
         static::$is_logged_in = true;
     }

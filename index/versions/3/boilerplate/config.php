@@ -57,7 +57,7 @@ class Config {
     public static $g_race_transport_default;
     public static $g_enable_race_accommodation;
     public static $g_race_accommodation_default;
-    public static $g_enable_oris_support;
+    // public static $g_external_is_connector; // disabled as it is not used in api and not all clubs uses it
     public static $g_custom_entry_list_text;
 }
 
