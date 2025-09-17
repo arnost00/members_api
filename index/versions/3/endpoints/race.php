@@ -81,7 +81,8 @@ class Race implements Endpoint {
                 zavxus.pozn_in AS note_internal,
                 zavxus.transport,
                 zavxus.sedadel AS transport_shared,
-                zavxus.ubytovani AS accommodation
+                zavxus.ubytovani AS accommodation,
+                IF (zavxus.si_chip != 0, zavxus.si_chip, user.si_chip) AS si_chip
             FROM `" . Tables::$TBL_ZAVXUS . "` AS zavxus
             LEFT JOIN `" . Tables::$TBL_USER . "` AS user ON zavxus.id_user = user.id
             WHERE zavxus.id_zavod = ?
