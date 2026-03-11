@@ -79,10 +79,12 @@ class Logging {
         return static::custom($text, static::$LEVEL_FATAL);
     }
 
-    public static function exception($exception) {
+    public static function exception($exception, $marker = "") {
         return static::error(json_encode([
+            "marker" => $marker,
             "message" => $exception->getMessage(),
             "code" => $exception->getCode(),
+            "line" => $exception->getLine(),
             "file" => $exception->getFile(),
             "trace" => $exception->getTrace(),
         ]));

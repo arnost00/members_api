@@ -315,11 +315,10 @@ class ContentFinanceBlock {
             }
         }
 
-        if ($subscriber["active_fin"]) {
-            // @ is used to prevent code duplication
-            $table = @static::$data[$subscriber["id_user"]];
+        if ($subscriber["active_fin"] && isset(static::$data[$subscriber["id_user"]])) {
+            $table = static::$data[$subscriber["id_user"]];
 
-            if (isset($table) && !is_array($table)) {
+            if (is_array($table)) {
                 if (($subscriber["fin_type"] & Enums::$g_fin_mail_flag["1"]["id"]) !== 0 && $table["fin_total"] < 0) {
                     $this->message = "Tvůj zůstatek na oddílovém účtu poklesl do záporu, a činí " . $table["fin_total"] . ",-";
                 } else if (($subscriber["fin_type"] & Enums::$g_fin_mail_flag[0]["id"]) != 0 && $table["fin_total"] < $subscriber["fin_limit"]) {

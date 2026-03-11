@@ -14,12 +14,11 @@ class Notifications {
     private static $scope = "https://www.googleapis.com/auth/firebase.messaging";
 
     private static $leeway = 120;
-    private static $ttl = 3600;
-    private static $exp;
 
     private static $_adminsdk;
     private static $_jwt_token;
     private static $_oauth2_token;
+    private static $_oauth2_expires;
 
     private static function adminsdk() {
         if (static::$_adminsdk === null) {
@@ -38,9 +37,7 @@ class Notifications {
             ], "RS256");
 
             $iat = time();
-
-            // expiration must be saved, required by static::oauth2_token()
-            static::$exp = $iat + static::$ttl;
+            $exp = $iat + 3600;
 
             // generate token
             static::$_jwt_token = $jwt->encode([
@@ -48,7 +45,7 @@ class Notifications {
                 "sub" => static::adminsdk()["client_email"],
                 "aud" => static::$aud,
                 "iat" => $iat,
-                "exp" => static::$exp,
+                "exp" => $exp,
                 "scope" => static::$scope,
             ], [
                 "kid" => static::adminsdk()["private_key_id"],
@@ -63,9 +60,9 @@ class Notifications {
             $tokens = file_get_contents(\Manifest::$firebase_tokens);
             $tokens = json_decode($tokens, true, 512, JSON_THROW_ON_ERROR);
 
-            if (isset($tokens["exp"]) && time() + static::$leeway < $tokens["exp"]) {
+            if (isset($tokens["oauth2_expires"]) && time() + static::$leeway < $tokens["oauth2_expires"]) {
                 // token is still valid
-                static::$exp = $tokens["exp"];
+                static::$_oauth2_expires = $tokens["oauth2_expires"];
                 static::$_oauth2_token = $tokens["oauth2_token"];
             } else {
                 // token is expired
@@ -82,17 +79,17 @@ class Notifications {
                 $response = curl_exec($curl);
                 $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
 
-                static::check_api_error($response, $curl);
+                if (curl_getinfo($curl, CURLINFO_HTTP_CODE) >= 400) {
+                    throw new ApiException("FCM OAUTH2 ERROR", 500, json_decode($response));
+                }
 
-                curl_close($curl);
-
-                // expiration is already set by static::jwt_token()
                 static::$_oauth2_token = $response["access_token"];
+                static::$_oauth2_expires = time() + $response["expires_in"];
 
                 // save new token
                 file_put_contents(\Manifest::$firebase_tokens, json_encode([
                     "oauth2_token" => static::$_oauth2_token,
-                    "exp" => static::$exp,
+                    "oauth2_expires" => static::$_oauth2_expires,
                 ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), LOCK_EX);
             }
         }
@@ -100,17 +97,55 @@ class Notifications {
         return static::$_oauth2_token;
     }
 
-    private static function check_api_error($response, $curl) {
-        if (curl_getinfo($curl, CURLINFO_HTTP_CODE) < 400) {
-            return;
+    public static function send($payload) {
+        $curl = curl_init();
+
+        $token = static::oauth2_token();
+
+        curl_setopt($curl, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/orientacny-beh/messages:send");
+        curl_setopt($curl, CURLOPT_POST, true);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            "Content-Type: application/json",
+            "Authorization: Bearer " . $token,
+        ]);
+
+        $response = curl_exec($curl);
+        $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+
+        if (curl_getinfo($curl, CURLINFO_HTTP_CODE) >= 400) {
+            throw new ApiException("FCM SEND (STALE USER TOKEN?)", 500, json_encode(($response)));
         }
 
-        $message = $response["error"]["message"];
-        $code = $response["error"]["code"];
-        $status = $response["error"]["status"];
-        $details = json_encode($response["error"]["details"], JSON_THROW_ON_ERROR);
+        return $response;
+    }
 
-        throw new ApiException("Google API:", 500, "Google API ($code): $status. $message ($details)");
+    public static function topics($token) {
+        // DEBUG //
+        $curl = curl_init();
+
+        curl_setopt($curl, CURLOPT_URL, "https://iid.googleapis.com/iid/info/" . $token . "?details=true");
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_setopt($curl, CURLOPT_POSTFIELDS, "");
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            "Content-Type: application/json",
+            "Authorization: Bearer " . static::oauth2_token(),
+        ]);
+
+        $response = curl_exec($curl);
+
+        echo $response;
+
+        // echo $curl->server;
+
+        // if ($curl->is_error()) {
+        //     throw new ApiException($curl->response, 400);
+        //     return;
+        // }
+
+        // echo $curl->response;
     }
 
     public static function send_multicast($array) {
@@ -174,57 +209,6 @@ class Notifications {
 
         return $result;
         */
-    }
-
-    public static function send($payload) {
-        $curl = curl_init();
-
-        curl_setopt($curl, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/orientacny-beh/messages:send");
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, [
-            "Content-Type: application/json",
-            "Authorization: Bearer " . static::oauth2_token(),
-        ]);
-
-        $response = curl_exec($curl);
-        $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
-
-        static::check_api_error($response, $curl);
-
-        curl_close($curl);
-
-        return $response;
-    }
-
-    public static function topics($token) {
-        // DEBUG //
-        $curl = curl_init();
-
-        curl_setopt($curl, CURLOPT_URL, "https://iid.googleapis.com/iid/info/" . $token . "?details=true");
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
-        curl_setopt($curl, CURLOPT_POSTFIELDS, "");
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, [
-            "Content-Type: application/json",
-            "Authorization: Bearer " . static::oauth2_token(),
-        ]);
-
-        $response = curl_exec($curl);
-
-        curl_close($curl);
-
-        echo $response;
-
-        // echo $curl->server;
-
-        // if ($curl->is_error()) {
-        //     throw new ApiException($curl->response, 400);
-        //     return;
-        // }
-
-        // echo $curl->response;
     }
 }
 

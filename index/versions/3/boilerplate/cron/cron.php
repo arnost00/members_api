@@ -9,6 +9,7 @@ require_once __DIR__ . "/../../boilerplate/config.php";
 require_once __DIR__ . "/../../boilerplate/utils.php";
 require_once __DIR__ . "/blocks.php";
 
+use Core\Logging;
 use PHPMailer\PHPMailer\PHPMailer;
 
 class Cron {
@@ -17,13 +18,18 @@ class Cron {
     }
 
     public static function mailinfo_notify() {
+        $timestamp = time();
+        $problems = 0;
         $subscribers = Database::fetch_assoc_all("SELECT * FROM " . Tables::$TBL_MAILINFO . " WHERE notify_type != 0 ORDER BY `id`");
 
         if (!$subscribers) {
-            return;
+            return [
+                "processed_in_seconds" => time() - $timestamp,
+                "problems" => $problems,
+            ];
         }
 
-        $tokens = Database::fetch_assoc_all("
+        $tokens = Database::query("
             SELECT
                 mailinfo.id_user,
                 tokens.fcm_token,
@@ -48,71 +54,80 @@ class Cron {
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
         $mail->Subject = "Informace o oddílových přihláškách";
 
-        $mail_queue = [];
+        // build notify queue
+        // we can't send notifications immediately, because $tokens are not indexed by $user_id
         $notify_queue = [];
 
         foreach ($subscribers as $subscriber) {
-            $news = new ContentNewsBlock($subscriber);
-            $races = new ContentRacesBlock($subscriber);
-            $finance = new ContentFinanceBlock($subscriber);
+            try {
+                $user_id = $subscriber["id_user"];
+                $news = new ContentNewsBlock($subscriber);
+                $races = new ContentRacesBlock($subscriber);
+                $finance = new ContentFinanceBlock($subscriber);
 
-            if ($news->is_empty() && $races->is_empty() && $finance->is_empty()) {
-                continue;
-            }
+                if ($news->is_empty() && $races->is_empty() && $finance->is_empty()) {
+                    continue;
+                }
 
-            if ($subscriber["email"] && ($subscriber["notify_type"] & Enums::$g_notify_type_flag[0]["id"]) !== 0) {
-                $body = "<!DOCTYPE html><html><body>";
-                $body .= "<h2>Vybrané informace o termínech a změnách v příhláškovém systému " . Config::$g_shortcut . "</h2>\n";
-                $body .= "<hr />";
+                if ($subscriber["email"] && ($subscriber["notify_type"] & Enums::$g_notify_type_flag[0]["id"]) !== 0) {
+                    $body = "<!DOCTYPE html><html><body>";
+                    $body .= "<h2>Vybrané informace o termínech a změnách v příhláškovém systému " . Config::$g_shortcut . "</h2>\n";
+                    $body .= "<hr />";
 
-                $body .= $news->export_mail();
-                $body .= $races->export_mail();
-                $body .= $finance->export_mail();
+                    $body .= $news->export_mail();
+                    $body .= $races->export_mail();
+                    $body .= $finance->export_mail();
 
-                $body .= "<hr />\n";
-                $body .= "<p>Vygenerováno dne " . Utils::formatTimestamps(Utils::getCurrentDate()) . "</p>\n";
-                $body .= "<p>Změnu a případné zrušení zasílaných informací provedete přes přihláškový systém oddílu " . Config::$g_shortcut . ".</p>\n";
-                $body .= "<p>Nejlépe přímo na adrese <a href='" . Config::$g_baseadr . "'>" . Config::$g_baseadr . "</a></p>\n";
-                $body .= "</body></html>";
+                    $body .= "<hr />\n";
+                    $body .= "<p>Vygenerováno dne " . Utils::formatTimestamps(Utils::getCurrentDate()) . "</p>\n";
+                    $body .= "<p>Změnu a případné zrušení zasílaných informací provedete přes přihláškový systém oddílu " . Config::$g_shortcut . ".</p>\n";
+                    $body .= "<p>Nejlépe přímo na adrese <a href='" . Config::$g_baseadr . "'>" . Config::$g_baseadr . "</a></p>\n";
+                    $body .= "</body></html>";
 
-                $mail_queue[$subscriber["email"]] = $body;
-            }
+                    $mail->clearAddresses();
+                    $mail->addAddress($subscriber["email"]);
+                    $mail->Body = $body;
+                    $mail->send();
+                }
 
-            if (($subscriber["notify_type"] & Enums::$g_notify_type_flag[1]["id"]) !== 0) {
-                $notify_queue[$subscriber["id_user"]] = array_merge(
-                    $news->export_notify(),
-                    $races->export_notify(),
-                    $finance->export_notify(),
-                );
+                if (($subscriber["notify_type"] & Enums::$g_notify_type_flag[1]["id"]) !== 0) {
+                    print_r("wants notify", $subscriber["id_user"]);
+                    $notify_queue[$subscriber["id_user"]] = array_merge(
+                        $news->export_notify(),
+                        $races->export_notify(),
+                        $finance->export_notify(),
+                    );
+                }
+            } catch (\Throwable $exception) {
+                $problems++;
+                Logging::exception($exception, "mail:" . $subscriber["id_user"]);
             }
         }
-
-        foreach ($mail_queue as $email => $body) {
-            $mail->clearAddresses();
-            $mail->addAddress($email);
-            $mail->Body = $body;
-            $mail->send();
-        }
-
-        $report = [];
-        $response = [];
 
         foreach ($tokens as ["id_user" => $user_id, "fcm_token" => $token, "device" => $device]) {
-            if ($token === null) {
-                $report[] = "Missing token for '$device' of user '$user_id'.";
-                continue;
-            }
+            try {
+                if ($token === null) {
+                    $problems++;
+                    Logging::warning("User $user_id wants notifications, but no fcm_token is provided.");
+                    continue;
+                }
 
-            if (!isset($notify_queue[$user_id]) || empty($notify_queue[$user_id])) {
-                continue;
-            }
+                if (!isset($notify_queue[$user_id])) {
+                    continue;
+                }
 
-            foreach ($notify_queue[$user_id] as $content) {
-                // content have to be passed as an NotifyContent instance so we can set the token
-                $content->token($token);
+                print("sending notify for " . $user_id);
+                print_r($notify_queue[$user_id]);
 
-                // send notification
-                $response[] = Notifications::send($content->export());
+                foreach ($notify_queue[$user_id] as $content) {
+                    // content have to be passed as an NotifyContent instance so we can set the token
+                    $content->token($token);
+                    Notifications::send($content->export());
+                }
+            } catch (\Throwable $exception) {
+                print("problematic user " . $user_id);
+                $problems++;
+                Logging::exception($exception, "notify:" . $user_id);
             }
         }
 
@@ -121,8 +136,8 @@ class Cron {
         Database::query("UPDATE `" . Tables::$TBL_NEWS . "` SET `modify_flag` = 0");
 
         return [
-            "report" => $report,
-            "response" => $response,
+            "processed_in_seconds" => time() - $timestamp,
+            "problems" => $problems,
         ];
     }
 }

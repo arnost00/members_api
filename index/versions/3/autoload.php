@@ -32,11 +32,12 @@ Router::partialGroup("/{clubname}", function ($clubname) {
     // should only be used for middlewares
     request()->clubname = $clubname;
 
-    Router::form("/", function ($clubname) {
-        return "<h1>Welcome, traveler!</h1><p>You have just landed on the REST APIv3 of <b>" . $clubname . "</b>.</p>\n<pre>request()->debug = " . (request()->debug ? "true" : "false") . "</pre>";
-    });
-
     Router::group(["middleware" => ConfigLoader::class], function () {
+        Router::form("/", function ($clubname) {
+            // put this into ConfigLoader, so request()->debug is set correctly
+            return "<h1>Welcome, traveler!</h1><p>You have just landed on the REST APIv3 of <b>" . $clubname . "</b>.</p>\n<pre>request()->debug = " . (request()->debug ? "true" : "false") . "</pre>";
+        });
+
         User::init();
         Race::init();
         System::init();
