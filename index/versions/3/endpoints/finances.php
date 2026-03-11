@@ -230,7 +230,7 @@ class Finances implements Endpoint {
                     "amount" => $child["amount"],
                     "note" => $child["note"],
                     "date" => $child["date"],
-                    "race_id" => $child["race_id"],
+                    "id_zavod" => $child["race_id"],
                 ]);
 
                 $fin_id = Database::mysqli()->insert_id;
