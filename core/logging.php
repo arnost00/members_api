@@ -42,7 +42,7 @@ class Logging {
             if (!$logline) continue;
 
             [$timestamp, $identifier, $level, $data] = explode(" - ", $logline, 4);
-            [$clubname, $ip] = explode("::", $identifier, 2);
+            [$ip, $clubname] = explode("::", $identifier, 2);
 
             $loglines[] = [
                 "timestamp" => $timestamp,

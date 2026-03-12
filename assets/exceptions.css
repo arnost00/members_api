@@ -1,0 +1,49 @@
+pre {
+  overflow: auto;
+  background-color: #eee;
+  padding: 1em;
+}
+
+details pre {
+  margin: 0;
+}
+
+em {
+  color: #f43f5e;
+  font-style: normal;
+  font-weight: bold;
+}
+
+span {
+  color: #aaa;
+}
+
+p {
+  color: #1e293b;
+}
+
+details {
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+
+summary {
+  font-weight: bold;
+  padding: 0.5em;
+}
+
+details[open] summary {
+  border-bottom: 1px solid #aaa;
+}
+
+table,
+th,
+td {
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid black;
+  padding: 0.5em;
+}

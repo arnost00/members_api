@@ -2,7 +2,7 @@
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *, Authorization");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Methods: *");
 
 require_once Manifest::$libraries_directory . "/autoload_Pecee.php";
 require_once Manifest::$core_directory . "/exceptions.php";
@@ -20,7 +20,7 @@ request()->version = null;
 
 Router::group(["prefix" => "/api/"], function () {
     Router::form("/", function () {
-        return "<h1>Members API</h1>";
+        return "<h1>Members API</h1><p style='color:red;'>NON-PRODUCTION MODE</p>";
     });
 
     Router::form("/error", function () {
@@ -35,7 +35,7 @@ Router::group(["prefix" => "/api/"], function () {
         }
 
         if (!@(include Manifest::$versions_directory . "/" . $version . "/autoload.php")) {
-            throw new ApiException("Oops! Looks like the API version you're searching for is playing hide and seek with us. Please check if it slipped into another dimension or try a different version!", 404);
+            throw new ApiException("Unable to load this API version.", 404);
         }
     })->where(["version" => "\d+"]);
 
@@ -43,5 +43,9 @@ Router::group(["prefix" => "/api/"], function () {
         if (!@(include Manifest::$versions_directory . "/members/autoload.php")) {
             throw new ApiException("Oops! Looks like the members autoload file is not there.", 500);
         }
+    });
+
+    Router::partialGroup("/logging", function () {
+        include __DIR__ . "/logging.php";
     });
 });
