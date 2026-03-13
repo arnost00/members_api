@@ -315,14 +315,15 @@ class ContentFinanceBlock {
             }
         }
 
+        // informacie o financiach nechodia ludom, ktori si spravavuju sami financie (chief_pay)
         if ($subscriber["active_fin"] && isset(static::$data[$subscriber["id_user"]])) {
             $table = static::$data[$subscriber["id_user"]];
 
             if (is_array($table)) {
                 if (($subscriber["fin_type"] & Enums::$g_fin_mail_flag["1"]["id"]) !== 0 && $table["fin_total"] < 0) {
-                    $this->message = "Tvůj zůstatek na oddílovém účtu poklesl do záporu, a činí " . $table["fin_total"] . ",-";
+                    $this->message = "Tvůj zůstatek na oddílovém účtu poklesl do záporu, a činí <b>" . $table["fin_total"] . ",-</b>";
                 } else if (($subscriber["fin_type"] & Enums::$g_fin_mail_flag[0]["id"]) != 0 && $table["fin_total"] < $subscriber["fin_limit"]) {
-                    $this->message = "Tvůj zůstatek na oddílovém účtu poklesl pod definovanou hranici, a činí " . $table["fin_total"] . ",-";
+                    $this->message = "Tvůj zůstatek na oddílovém účtu poklesl pod definovanou hranici, a činí <b>" . $table["fin_total"] . ",-</b>";
                 }
             }
         }
@@ -355,13 +356,15 @@ class ContentFinanceBlock {
     }
 
     public function export_notify() {
-        $queue = [];
-
-        if ($this->message) {
-            $queue[] = new NotifyContent($this->message);
-        }
-
         // finance table probably will not be implemented
+
+
+        $queue = [];
+        // $queue[] = new NotifyContent($this->message);
+
+        // if ($this->message) {
+        // }
+
 
         return $queue;
     }

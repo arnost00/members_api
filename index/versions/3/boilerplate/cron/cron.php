@@ -69,34 +69,37 @@ class Cron {
                     continue;
                 }
 
-                if ($subscriber["email"] && ($subscriber["notify_type"] & Enums::$g_notify_type_flag[0]["id"]) !== 0) {
-                    $body = "<!DOCTYPE html><html><body>";
-                    $body .= "<h2>Vybrané informace o termínech a změnách v příhláškovém systému " . Config::$g_shortcut . "</h2>\n";
-                    $body .= "<hr />";
+                if (Config::$g_enable_mailinfo) {
+                    if ($subscriber["email"] && ($subscriber["notify_type"] & Enums::$g_notify_type_flag[0]["id"]) !== 0) {
+                        $body = "<!DOCTYPE html><html><body>";
+                        $body .= "<h2>Vybrané informace o termínech a změnách v příhláškovém systému " . Config::$g_shortcut . "</h2>\n";
+                        $body .= "<hr />";
 
-                    $body .= $news->export_mail();
-                    $body .= $races->export_mail();
-                    $body .= $finance->export_mail();
+                        $body .= $news->export_mail();
+                        $body .= $races->export_mail();
+                        $body .= $finance->export_mail();
 
-                    $body .= "<hr />\n";
-                    $body .= "<p>Vygenerováno dne " . Utils::formatTimestamps(Utils::getCurrentDate()) . "</p>\n";
-                    $body .= "<p>Změnu a případné zrušení zasílaných informací provedete přes přihláškový systém oddílu " . Config::$g_shortcut . ".</p>\n";
-                    $body .= "<p>Nejlépe přímo na adrese <a href='" . Config::$g_baseadr . "'>" . Config::$g_baseadr . "</a></p>\n";
-                    $body .= "</body></html>";
+                        $body .= "<hr />\n";
+                        $body .= "<p>Vygenerováno dne " . Utils::formatTimestamps(Utils::getCurrentDate()) . "</p>\n";
+                        $body .= "<p>Změnu a případné zrušení zasílaných informací provedete přes přihláškový systém oddílu " . Config::$g_shortcut . ".</p>\n";
+                        $body .= "<p>Nejlépe přímo na adrese <a href='" . Config::$g_baseadr . "'>" . Config::$g_baseadr . "</a></p>\n";
+                        $body .= "</body></html>";
 
-                    $mail->clearAddresses();
-                    $mail->addAddress($subscriber["email"]);
-                    $mail->Body = $body;
-                    $mail->send();
+                        $mail->clearAddresses();
+                        $mail->addAddress($subscriber["email"]);
+                        $mail->Body = $body;
+                        $mail->send();
+                    }
                 }
 
-                if (($subscriber["notify_type"] & Enums::$g_notify_type_flag[1]["id"]) !== 0) {
-                    print_r("wants notify", $subscriber["id_user"]);
-                    $notify_queue[$subscriber["id_user"]] = array_merge(
-                        $news->export_notify(),
-                        $races->export_notify(),
-                        $finance->export_notify(),
-                    );
+                if (Config::$g_enable_notify) {
+                    if (($subscriber["notify_type"] & Enums::$g_notify_type_flag[1]["id"]) !== 0) {
+                        $notify_queue[$subscriber["id_user"]] = array_merge(
+                            $news->export_notify(),
+                            $races->export_notify(),
+                            $finance->export_notify(),
+                        );
+                    }
                 }
             } catch (\Throwable $exception) {
                 $problems++;
@@ -104,30 +107,28 @@ class Cron {
             }
         }
 
-        foreach ($tokens as ["id_user" => $user_id, "fcm_token" => $token, "device" => $device]) {
-            try {
-                if ($token === null) {
+        if (Config::$g_enable_notify) {
+            foreach ($tokens as ["id_user" => $user_id, "fcm_token" => $token, "device" => $device]) {
+                try {
+                    if ($token === null) {
+                        $problems++;
+                        Logging::warning("User $user_id wants notifications, but no fcm_token is provided.");
+                        continue;
+                    }
+
+                    if (!isset($notify_queue[$user_id])) {
+                        continue;
+                    }
+
+                    foreach ($notify_queue[$user_id] as $content) {
+                        // content have to be passed as an NotifyContent instance so we can set the token
+                        $content->token($token);
+                        Notifications::send($content->export());
+                    }
+                } catch (\Throwable $exception) {
                     $problems++;
-                    Logging::warning("User $user_id wants notifications, but no fcm_token is provided.");
-                    continue;
+                    Logging::exception($exception, "notify:" . $user_id);
                 }
-
-                if (!isset($notify_queue[$user_id])) {
-                    continue;
-                }
-
-                print("sending notify for " . $user_id);
-                print_r($notify_queue[$user_id]);
-
-                foreach ($notify_queue[$user_id] as $content) {
-                    // content have to be passed as an NotifyContent instance so we can set the token
-                    $content->token($token);
-                    Notifications::send($content->export());
-                }
-            } catch (\Throwable $exception) {
-                print("problematic user " . $user_id);
-                $problems++;
-                Logging::exception($exception, "notify:" . $user_id);
             }
         }
 
@@ -138,6 +139,9 @@ class Cron {
         return [
             "processed_in_seconds" => time() - $timestamp,
             "problems" => $problems,
+            "mail_enabled" => Config::$g_enable_mailinfo,
+            "notify_enabled" => Config::$g_enable_notify,
+            "note" => "Every problem is carefully recorded. Use the log viewer or check the files.",
         ];
     }
 }
