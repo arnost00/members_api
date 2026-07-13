@@ -1,5 +1,5 @@
 # API Documentation
 
-- [Payment import docs](PAYMENTS.md)
+- [FINANCES](FINANCES.md)
 
 Everything else coming soon.
