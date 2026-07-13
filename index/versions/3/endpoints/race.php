@@ -51,9 +51,15 @@ class Race implements Endpoint {
     }
 
     public static function races() {
-        $current_date = Utils::getCurrentDate();
+    	$from_date = Input::key("from_date", required: false, filter: Input::$FILTER_ISO_DATE);
+        
+        if (!isset($from_date)) {
+            $from_date = Utils::getCurrentDate();
+        } else {
+            $from_date = strtotime($from_date);
+        }
 
-        $output = Database::query("SELECT `id` FROM `" . Tables::$TBL_RACE . "` WHERE `datum` >= ? || `datum2` >= ? ORDER BY `datum`", $current_date, $current_date);
+        $output = Database::query("SELECT `id` FROM `" . Tables::$TBL_RACE . "` WHERE `datum` >= ? || `datum2` >= ? ORDER BY `datum`", $from_date, $from_date);
 
         $result = [];
         while ($race = $output->fetch_assoc()) {
