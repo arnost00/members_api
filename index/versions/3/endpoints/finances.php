@@ -20,10 +20,14 @@ class Finances implements Endpoint {
     public static function init(): void {
         Router::partialGroup("/finances", function () {
             Router::get("/test", [static::class, "test"]);
+
             Router::group(["middleware" => AuthRequired::class], function () {
                 $fin_id = ["fin_id" => "[0-9]+"];
+                $user_id = ["user_id" => "[0-9]+"];
 
-                Router::get("/", [static::class, "overview"]);
+                Router::get("/", [static::class, "my_overview"]);
+                Router::get("/user", [static::class, "my_overview"]);
+                Router::get("/user/{user_id}", [static::class, "user_overview"])->where($user_id);
                 Router::get("/history", [static::class, "history"]);
                 Router::get("/{fin_id}", [static::class, "detail"])->where($fin_id);
                 Router::get("/{fin_id}/claim/history", [static::class, "claim_history"])->where($fin_id);
@@ -36,7 +40,15 @@ class Finances implements Endpoint {
         });
     }
 
-    public static function overview() {
+    public static function my_overview() {
+        return static::user_overview(Session::$user_id);
+    }
+
+    public static function user_overview($user_id) {
+        if ($user_id !== Session::$user_id && !Session::all(Session::$MASK_FIN)) {
+            throw new ApiException("You must be either the user or have finance permissions.", 403);
+        }
+
         $result = Database::fetch_assoc_all(
             "SELECT
                 user.id AS `user_id`,
@@ -46,8 +58,8 @@ class Finances implements Endpoint {
             LEFT JOIN `" . Tables::$TBL_FINANCE . "` AS fin ON user.id = fin.id_users_user
             WHERE fin.storno IS NULL AND (fin.id_users_user = ? OR user.chief_pay = ?)
             GROUP BY user.id",
-            Session::$user_id,
-            Session::$user_id
+            $user_id,
+            $user_id
         );
 
         response()->json($result);
