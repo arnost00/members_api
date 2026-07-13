@@ -19,8 +19,6 @@ use Core\ApiUndefinedKeyException;
 class Finances implements Endpoint {
     public static function init(): void {
         Router::partialGroup("/finances", function () {
-            Router::get("/test", [static::class, "test"]);
-
             Router::group(["middleware" => AuthRequired::class], function () {
                 $fin_id = ["fin_id" => "[0-9]+"];
                 $user_id = ["user_id" => "[0-9]+"];
