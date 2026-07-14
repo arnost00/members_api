@@ -4,23 +4,62 @@ Global API for "members" system.
 
 # Documentation
 
-- [Version 1](/index/versions/1/README.md) (STABLE)
-- [Version 2](/index/versions/2/README.md) (STABLE)
 - [Version 3](/index/versions/3/README.md) (LATEST)
+- [Version 2](/index/versions/2/README.md) _(DEPRECATED)_
+- [Version 1](/index/versions/1/README.md) _(DEPRECATED)_
 
 # URL Structure
 
 The URL structure for accessing the API follows the pattern:
 
 ```
-/api/<version>/<endpoint>
+https://members.eob.cz/api/<version>/<club>/<endpoint>
 ```
 
-**Components:**
+**Example:** https://members.eob.cz/api/3/spe/
 
-- `/api/` - Base path for all API requests.
-- `<version>` - API version number (e.g., `1`).
-- `<endpoint>` - Specific API endpoint (e.g., `/clubs`, `/spe/races`).
+---
+
+**`GET /api/3/clubs`**
+
+**Output:**
+
+```json
+[
+  {
+    "clubname": "spe",
+    "is_release": true,
+    "fullname": "KOB Sokol Pezinok",
+    "shortcut": "SPE",
+    "baseadr": "https://prihlasky.sokolpezinok.sk/",
+    "mainwww": "https://www.sokolpezinok.sk/",
+    "emailadr": "admin@sokolpezinok.sk"
+  }
+]
+```
+
+# Crash Reporter
+
+Any error is caught by [ApiCrashReporter](core/exceptions.php). By default, ApiCrashReporter renders HTML.
+
+**Example:** https://members.eob.cz/api/3/spe/this-triggers-not-found-error
+
+**JSON Output:**
+
+```json
+{
+  "code": 404,
+  "message": "Route not found: \"\/api\/3\/spe\/this-triggers-not-found-error\/\""
+}
+```
+
+# Log Viewer
+
+**`/api/logging`**
+
+# Members dynamic clubs
+
+Implemented, haven't been tested properly.
 
 # License
 
