@@ -3,9 +3,9 @@
 - [RACE](RACE.md)
 - [USER](USER.md)
 - [FINANCES](FINANCES.md)
-
-Everything else coming soon.
+- SYSTEM is coming soon.
 
 # TODO:
 
-### TEST DISABLED FINANCES, POSSIBLE ERROR ON FINANCE MASK
+1. Remove permissions masks
+2. Test disabled finances
