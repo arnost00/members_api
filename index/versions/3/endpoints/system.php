@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 
@@ -86,6 +86,10 @@ class System implements Endpoint {
     }
 
     public static function fcm_token_update() {
+        if (Session::$device === null) {
+            throw new ApiException("Device is required.", 400);
+        }
+
         $token = Input::key("token");
 
         Database::query("
@@ -102,6 +106,10 @@ class System implements Endpoint {
     }
 
     public static function fcm_token_delete() {
+        if (Session::$device === null) {
+            throw new ApiException("Device is required.", 400);
+        }
+
         Database::query("UPDATE `" . Tables::$TBL_TOKENS . "` SET `fcm_token` = NULL WHERE `device` = ? AND `user_id` = ?", Session::$device, Session::$user_id);
     }
 

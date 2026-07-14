@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 require_once __DIR__ . "/../../boilerplate/database.php";
 require_once __DIR__ . "/../../boilerplate/notify.php";

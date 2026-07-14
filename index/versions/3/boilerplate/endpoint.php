@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 interface Endpoint {
     // defines an api endpoint

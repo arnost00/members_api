@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 require_once \Manifest::$libraries_directory . "/autoload_PHPMailer.php";
 require_once __DIR__ . "/../../boilerplate/database.php";

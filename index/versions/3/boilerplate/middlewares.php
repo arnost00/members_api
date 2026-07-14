@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 use Pecee\Http\middleware\IMiddleware;
 use Pecee\Http\Request;

@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 require_once \Manifest::$libraries_directory . "/autoload_JWT.php";
 require_once __DIR__ . "/database.php";

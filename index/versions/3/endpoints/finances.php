@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 

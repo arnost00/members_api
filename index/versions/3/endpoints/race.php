@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 
@@ -34,7 +34,6 @@ class Race implements Endpoint {
                 Router::post("/{race_id}/signin/{user_id}", [static::class, "signin"])->where($race_id + $user_id);
                 Router::post("/{race_id}/signout/{user_id}", [static::class, "signout"])->where($race_id + $user_id);
                 Router::post("/{race_id}/notify", [static::class, "notify"])->where($race_id);
-                Router::post("/{race_id}/payments/import", [static::class, "payments_import"])->where($race_id);
                 Router::get("/{race_id}/payments", [static::class, "payments"])->where($race_id);
             });
         });
@@ -51,8 +50,8 @@ class Race implements Endpoint {
     }
 
     public static function races() {
-    	$from_date = Input::key("from_date", required: false, filter: Input::$FILTER_ISO_DATE);
-        
+        $from_date = Input::key("from_date", required: false, filter: Input::$FILTER_ISO_DATE);
+
         if (!isset($from_date)) {
             $from_date = Utils::getCurrentDate();
         } else {

@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiTwo;
+namespace Api;
 
 use Pecee\SimpleRouter\SimpleRouter as Router;
 
@@ -31,8 +31,8 @@ class User implements Endpoint {
                 Router::delete("/device/{device}", [static::class, "user_device_delete"]);
 
                 // current user
-                Router::get("/", [static::class, "user_profile"]); // @deprecated
-                Router::post("/", [static::class, "user_profile_update"]); // @deprecated
+                Router::get("/", [static::class, "my_profile"]); // @deprecated
+                Router::post("/", [static::class, "my_profile_update"]); // @deprecated
                 Router::get("/managing", [static::class, "my_managing"]);
                 Router::get("/profile", [static::class, "my_profile"]);
                 Router::post("/profile", [static::class, "my_profile_update"]);
@@ -83,10 +83,9 @@ class User implements Endpoint {
         ]);
     }
 
-    public static function policies($user_id) {
+    public static function user_policies($user_id) {
         throw new ApiException("Not implemented yet. Sorry!", 404);
     }
-
 
     public static function my_managing() {
         return static::managing(Session::$user_id);
@@ -485,7 +484,7 @@ class User implements Endpoint {
         if ($device === null) {
             $tokens = Database::fetch_assoc_all("SELECT fcm_token FROM `" . Tables::$TBL_TOKENS . "` WHERE user_id = ? AND fcm_token != ''", $user_id);
         } else {
-            $tokens = Database::fetch_assoc_all("SELECT fcm_token FROM `" . Tables::$TBL_TOKENS . "` WHERE device = ? AND fcm_token != ''", $device);
+            $tokens = Database::fetch_assoc_all("SELECT fcm_token FROM `" . Tables::$TBL_TOKENS . "` WHERE user_id = ? AND device = ? AND fcm_token != ''", $user_id, $device);
         }
 
         if ($tokens === null) {
