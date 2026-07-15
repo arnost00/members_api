@@ -3,7 +3,7 @@
 - [RACE](RACE.md)
 - [USER](USER.md)
 - [FINANCES](FINANCES.md)
-- SYSTEM is coming soon.
+- [SYSTEM](SYSTEM.md)
 
 # TODO:
 
