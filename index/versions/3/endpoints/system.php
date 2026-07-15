@@ -22,9 +22,6 @@ class System implements Endpoint {
                 Router::post("/fcm_token", [static::class, "fcm_token_update"]);
                 Router::delete("/fcm_token", [static::class, "fcm_token_delete"]);
                 Router::post("/", [static::class, "device_update"]);
-            });
-
-            Router::group(["middleware" => TokenRequired::class, "prefix" => "/device"], function () {
                 Router::delete("/", [static::class, "device_delete"]);
             });
         });

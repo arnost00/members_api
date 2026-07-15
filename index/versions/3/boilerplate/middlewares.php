@@ -57,29 +57,6 @@ class AuthRequired implements IMiddleware {
     }
 }
 
-class TokenRequired implements IMiddleware {
-    public function handle(Request $request): void {
-        // ignore if it is preflight request
-        if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-            return;
-        }
-
-        if (Session::$is_logged_in) {
-            return;
-        }
-
-        $token = Session::get_access_token();
-
-        try {
-            $array = Session::jwt()->decode($token, false);
-        } catch (JWTException $error) {
-            throw new ApiException($error->getMessage(), 401);
-        }
-
-        Session::login_from_token($array);
-    }
-}
-
 class ConfigLoader implements IMiddleware {
     public function handle(Request $request): void {
         // ignore if it is preflight
