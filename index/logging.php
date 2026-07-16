@@ -25,8 +25,8 @@ echo "<!DOCTYPE><html><head><link rel='stylesheet' href='" . \Manifest::$assets_
 
 Router::get("/", function () {
     echo "<h1>Log viewer</h1>";
-    echo "<p>Show logs for date: <code>/api/logging/" . Logging::$file_format . "</code></p>";
-    echo "<p>Show logs for <a href='/api/logging/" . date(Logging::$file_format) . "'>today</a></p>";
+    echo "<p>Show logs for date: <code>" . $_SERVER["REQUEST_URI"] . "/" . Logging::$file_format . "</code></p>";
+    echo "<p>Show logs for <a href='" . date(Logging::$file_format) . "'>today</a></p>";
 });
 
 Router::get("/{date}", function ($date) {
