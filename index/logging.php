@@ -5,8 +5,6 @@ use Core\Logging;
 
 if (!isset(Secrets::$logging_password_hash)) {
     http_response_code(500);
-    header('WWW-Authenticate: Basic realm="Logging"');
-
     die("Define logging password in secrets first.");
 }
 
