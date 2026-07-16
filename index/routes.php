@@ -18,7 +18,7 @@ ApiCrashReport::init();
 request()->debug = false;
 request()->version = null;
 
-Router::group(["prefix" => "/api/"], function () {
+Router::group(["prefix" => "/api/debug"], function () {
     Router::form("/", function () {
         return "<h1>Members API</h1><p style='color:red;'>NON-PRODUCTION MODE</p>";
     });

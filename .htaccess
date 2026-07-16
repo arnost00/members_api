@@ -13,3 +13,9 @@ RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 RewriteCond %{SCRIPT_FILENAME} -d [OR]
 RewriteCond %{SCRIPT_FILENAME} -f
 RedirectMatch 404 /\.
+
+# disable cache
+<IfModule mod_headers.c>
+Header set Cache-Control "no-cache, no-store, must-revalidate"
+Header set Expires 0
+</IfModule>

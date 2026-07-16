@@ -10,6 +10,7 @@ require_once __DIR__ . "/../boilerplate/config.php";
 require_once __DIR__ . "/../boilerplate/middlewares.php";
 
 use Core\ApiException;
+use Manifest;
 
 class System implements Endpoint {
     public static function init(): void {
@@ -142,6 +143,16 @@ class System implements Endpoint {
     }
 
     public static function cron() {
+        $secret_key = Input::key("secret_key", required: true);
+
+        if (!isset(\Secrets::$cron_secret_key)) {
+            throw new ApiException("Define cron secret key in secrets first.", 500);
+        }
+
+        if ($secret_key !== \Secrets::$cron_secret_key) {
+            throw new ApiException("Cron secret key is incorrect.", 403);
+        }
+
         // import only if we actually need to run cron
         require_once __DIR__ . "/../boilerplate/cron/cron.php";
         Cron::start();

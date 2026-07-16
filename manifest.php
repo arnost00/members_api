@@ -32,3 +32,5 @@ class Manifest {
     // must NOT have trailing slash
     public static $assets_url = "/api/debug/assets";
 }
+
+require_once __DIR__ . "/.secrets/secrets.php";

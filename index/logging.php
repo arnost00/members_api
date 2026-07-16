@@ -3,6 +3,13 @@
 use Pecee\SimpleRouter\SimpleRouter as Router;
 use Core\Logging;
 
+if (!isset(Secrets::$logging_password_hash)) {
+    http_response_code(500);
+    header('WWW-Authenticate: Basic realm="Logging"');
+
+    die("Define logging password in secrets first.");
+}
+
 if (!isset($_SERVER["PHP_AUTH_USER"])) {
     http_response_code(401);
     header('WWW-Authenticate: Basic realm="Logging"');
@@ -10,9 +17,7 @@ if (!isset($_SERVER["PHP_AUTH_USER"])) {
     die("This site is protected");
 }
 
-// sorry
-// baked in password is in .secrets
-if (!password_verify($_SERVER["PHP_AUTH_USER"] . ":" . $_SERVER["PHP_AUTH_PW"], '$2y$10$IB08YWlrS8uJJSH9Fm/e/.BRz7JjBYCncHGlTMWc9.KZ0JVMyqp7q')) {
+if (!password_verify($_SERVER["PHP_AUTH_USER"] . ":" . $_SERVER["PHP_AUTH_PW"], \Secrets::$logging_password_hash)) {
     http_response_code(401);
     header('WWW-Authenticate: Basic realm="Logging"');
     die("Invalid credentials");
