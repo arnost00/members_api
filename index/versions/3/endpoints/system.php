@@ -73,6 +73,7 @@ class System implements Endpoint {
             "device" => $device,
             "device_name" => $device_name,
             "app_version" => $app_version,
+            "fcm_token" => "",
         ]);
 
         response()->json([
