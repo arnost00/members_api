@@ -51,11 +51,8 @@ class ApiCrashReport {
             "path" => $_SERVER["REQUEST_URI"],
             "line" => $exception->getLine(),
             "file" => $exception->getFile(),
+            "trace" => $exception->getTrace(),
         ];
-
-        if (request()->debug) {
-            $content += $content_debug;
-        }
 
         // write a log entry
         Logging::error(json_encode($content + $content_debug));
