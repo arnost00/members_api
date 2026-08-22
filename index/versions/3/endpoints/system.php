@@ -64,8 +64,6 @@ class System implements Endpoint {
 
         // generate device uuid
         $device = openssl_random_pseudo_bytes(16);
-        $device[6] = chr(ord($device[6]) & 0x0f | 0x40);
-        $device[8] = chr(ord($device[8]) & 0x3f | 0x80);
         $device = vsprintf("%s%s-%s-%s-%s-%s%s%s", str_split(bin2hex($device), 4));
 
         Database::insert(Tables::$TBL_TOKENS, [
