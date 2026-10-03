@@ -7,6 +7,7 @@ Global API for "members" system.
 - [Version 3](/index/versions/3/README.md) (LATEST)
 - [Version 2](/index/versions/2/README.md) _(DEPRECATED)_
 - [Version 1](/index/versions/1/README.md) _(DEPRECATED)_
+- [OpenAPI specification](/openapi.yaml) for version 3
 
 # URL Structure
 

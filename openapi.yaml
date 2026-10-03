@@ -1,0 +1,1576 @@
+openapi: 3.0.3
+info:
+  title: members_api
+  description: >
+    Global REST API for the "members" system (Czech/Slovak orienteering club
+    membership & race management). This specification covers **API version 3
+    (latest)**. Versions 1 and 2 are deprecated and not documented here.
+
+    See `/index/versions/3/*.md` in the source repository for the
+    human-written reference this specification was generated from.
+  version: "3.0.0"
+  license:
+    name: Boost Software License 1.0
+    url: https://www.boost.org/LICENSE_1_0.txt
+
+servers:
+  - url: https://members.eob.cz/api/3
+    description: Production (API v3)
+
+tags:
+  - name: Clubs
+    description: Club directory, not scoped to a single club.
+  - name: System
+    description: Login, devices and cron.
+  - name: User
+    description: User profiles, managed relationships, devices, notifications.
+  - name: Race
+    description: Races, sign-in/sign-out, race-scoped payments.
+  - name: Finances
+    description: Payments, claims (disputes), imports.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /clubs:
+    get:
+      tags: [Clubs]
+      operationId: getClubs
+      summary: List all clubs available on this API instance.
+      security: []
+      responses:
+        "200":
+          description: List of clubs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Club"
+
+  /{club}/:
+    get:
+      tags: [Clubs]
+      operationId: getClub
+      summary: Club landing page (health-check), HTML.
+      description: >
+        Not a JSON endpoint. Returns an HTML welcome page. `club` must match
+        `(?!clubs)\w+` and must exist, otherwise `404`/`418`.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: HTML welcome page.
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "418":
+          description: Club name contains invalid characters.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/system/:
+    get:
+      tags: [System]
+      operationId: getClubSystem
+      summary: System landing page, HTML.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: HTML placeholder page.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /{club}/system/login:
+    post:
+      tags: [System]
+      operationId: postClubSystemLogin
+      summary: Log in and obtain an access token for a new device.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+                app_version: { type: string, default: "" }
+                device_name: { type: string, default: "" }
+      responses:
+        "200":
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: "JWT, valid 90 days. Send as `Authorization: Bearer <token>`."
+                  expiration:
+                    type: integer
+                    description: Unix timestamp of expiration.
+                  device:
+                    type: string
+                    format: uuid
+                    description: Newly generated device UUID v4.
+                  user_id:
+                    type: integer
+        "403":
+          description: Unknown username, wrong password, or locked account.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/system/cron:
+    get:
+      tags: [System]
+      operationId: getClubSystemCron
+      summary: Run scheduled background jobs for this club.
+      description: Intended for internal/scheduled use, not for interactive clients.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Cron run finished.
+
+  /{club}/system/device/fcm_token:
+    post:
+      tags: [System]
+      operationId: postClubSystemDeviceFcmToken
+      summary: Set/update the FCM push token for the current device.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Updated, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [System]
+      operationId: deleteClubSystemDeviceFcmToken
+      summary: Clear the FCM push token for the current device (keeps the device record).
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Cleared, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/system/device/:
+    post:
+      tags: [System]
+      operationId: postClubSystemDevice
+      summary: Update current device metadata (name, app version, last-opened time).
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_name, app_version]
+              properties:
+                device_name: { type: string }
+                app_version: { type: string }
+      responses:
+        "200":
+          description: Updated, no body.
+        "400":
+          description: Session has no device (e.g. token not tied to a device).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [System]
+      operationId: deleteClubSystemDevice
+      summary: Delete the current device record entirely.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Deleted, no body.
+        "400":
+          description: Session has no device.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/{user_id}:
+    get:
+      tags: [User]
+      operationId: getClubUserUserId
+      summary: Basic info about a user.
+      description: Any authenticated user may view basic info about any user.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User basic info.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserBasic" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{club}/user/{user_id}/managing:
+    get:
+      tags: [User]
+      operationId: getClubUserUserIdManaging
+      summary: List users managed by this user ("chief_id" relation), including themselves.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: List of managed users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserManaging" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/managing:
+    get:
+      tags: [User]
+      operationId: getClubUserManaging
+      summary: Shortcut for `/user/{my_user_id}/managing`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: List of managed users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserManaging" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/{user_id}/races:
+    get:
+      tags: [User]
+      operationId: getClubUserUserIdRaces
+      summary: Races a user is signed in for.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: List of races.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserRace" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/{user_id}/devices:
+    get:
+      tags: [User]
+      operationId: getClubUserUserIdDevices
+      summary: Devices registered to a user.
+      description: Allowed for the user themselves, or callers with `policy_mng_big`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: List of devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Device" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/user/devices:
+    get:
+      tags: [User]
+      operationId: getClubUserDevices
+      summary: Shortcut for `/user/{my_user_id}/devices`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: List of devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Device" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/{user_id}/notify:
+    post:
+      tags: [User]
+      operationId: postClubUserUserIdNotify
+      summary: Send a push notification to a specific user.
+      description: Requires `policy_mng_big`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+                image: { type: string, format: uri, nullable: true }
+                device:
+                  type: string
+                  nullable: true
+                  description: Limit the notification to one device (not verified to belong to user_id).
+      responses:
+        "200":
+          description: Per-token send results.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: User/device has no active tokens.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/user/{user_id}/profile:
+    get:
+      tags: [User]
+      operationId: getClubUserUserIdProfile
+      summary: Full profile of a user.
+      description: >
+        Allowed for `policy_mng_big`/`policy_sadm`, or for self/managed users
+        (`SessionUtils::is_managing_this_user`). Otherwise `403`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Full user profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [User]
+      operationId: postClubUserUserIdProfile
+      summary: Update a user's profile.
+      description: >
+        All fields optional. Identity fields (name, surname, gender,
+        birth_date, birth_number, nationality, reg) require
+        `policy_mng_big`/`policy_sadm`. `is_hidden` requires `MASK_SADM`.
+        Contact/neutral fields are editable by self/managed users too.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserProfileUpdate" }
+      responses:
+        "200":
+          description: Keys actually written.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pushed:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/user/profile:
+    get:
+      tags: [User]
+      operationId: getClubUserProfile
+      summary: Shortcut for `/user/{my_user_id}/profile`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Full user profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [User]
+      operationId: postClubUserProfile
+      summary: Shortcut for `POST /user/{my_user_id}/profile`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserProfileUpdate" }
+      responses:
+        "200":
+          description: Keys actually written.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pushed:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/:
+    get:
+      tags: [User]
+      operationId: getClubUser
+      summary: "Deprecated: same as `GET /user/profile`."
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Full user profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [User]
+      operationId: postClubUser
+      summary: "Deprecated: same as `POST /user/profile`."
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserProfileUpdate" }
+      responses:
+        "200":
+          description: Keys actually written.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pushed:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/{user_id}/policies:
+    get:
+      tags: [User]
+      operationId: getClubUserUserIdPolicies
+      summary: "Not implemented. Always returns 404."
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "404":
+          description: "Not implemented yet."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/user/policies:
+    get:
+      tags: [User]
+      operationId: getClubUserPolicies
+      summary: Permission booleans of the logged-in user.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Policy flags.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Policies" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/device/{device}:
+    get:
+      tags: [User]
+      operationId: getClubUserDeviceDevice
+      summary: Detail of a single device, by id, across all users.
+      description: Allowed for `policy_mng_big`, or the device's own owner.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/Device"
+      responses:
+        "200":
+          description: Device detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Device" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [User]
+      operationId: deleteClubUserDeviceDevice
+      summary: Delete/unregister a device.
+      description: Same access rule as `GET` on this path.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/Device"
+      responses:
+        "200":
+          description: Deleted, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/user/notify:
+    get:
+      tags: [User]
+      operationId: getClubUserNotify
+      summary: Notification settings of the logged-in user.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Notification settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotifySettings" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [User]
+      operationId: postClubUserNotify
+      summary: Update notification settings of the logged-in user.
+      description: >
+        All fields optional. Bitmask fields (`notify_type`, `race_types`,
+        `rankings`, `send_changes_data`, `send_finances_data`) are sent as
+        integers (OR'd id values), even though `GET` returns them unpacked.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotifySettingsUpdate" }
+      responses:
+        "200":
+          description: Keys actually written.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pushed:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/send_notify:
+    get:
+      tags: [User]
+      operationId: getClubUserSendNotify
+      summary: Broadcast a push notification to everyone in the club.
+      description: >
+        Requires `policy_mng_big`. **Note:** uses `GET` despite having a side
+        effect (sends a notification) — kept as-is to match the live API.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+                image: { type: string, format: uri, nullable: true }
+      responses:
+        "200":
+          description: Notification send result.
+          content:
+            application/json:
+              schema: { type: object }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/user/list:
+    get:
+      tags: [User]
+      operationId: getClubUserList
+      summary: Directory of all non-hidden users.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: User directory.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserListItem" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/user/statistics:
+    get:
+      tags: [User]
+      operationId: getClubUserStatistics
+      summary: Device/FCM-token counts per non-hidden user.
+      description: Requires `policy_mng_big`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Per-user device statistics.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserStatistic" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/races:
+    get:
+      tags: [Race]
+      operationId: getClubRaces
+      summary: List races from a given date onward.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - name: from_date
+          in: query
+          required: false
+          description: ISO date. Defaults to today.
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: List of races.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Race" }
+
+  /{club}/race/:
+    get:
+      tags: [Race]
+      operationId: getClubRace
+      summary: Always fails — `race_id` is required.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "404":
+          description: "race_id is required."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    post:
+      tags: [Race]
+      operationId: postClubRace
+      summary: Always fails — `race_id` is required.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "404":
+          description: "race_id is required."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/race/{race_id}:
+    get:
+      tags: [Race]
+      operationId: getClubRaceRaceId
+      summary: Race detail, with the list of signed-in participants.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+      responses:
+        "200":
+          description: Race detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RaceDetail" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{club}/race/{race_id}/redirect:
+    get:
+      tags: [Race]
+      operationId: getClubRaceRaceIdRedirect
+      summary: Redirect to the legacy race info page.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+      responses:
+        "302":
+          description: Redirect to `{club baseadr}race_info_show.php?id_zav={race_id}`.
+
+  /{club}/race/{race_id}/relations:
+    get:
+      tags: [Race]
+      operationId: getClubRaceRaceIdRelations
+      summary: The logged-in user's and their managed users' sign-in status for a race.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+      responses:
+        "200":
+          description: Relations to the race.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RaceRelation" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/race/{race_id}/signin/{user_id}:
+    post:
+      tags: [Race]
+      operationId: postClubRaceRaceIdSigninUserId
+      summary: Sign a user in for a race (insert or update).
+      description: >
+        Requires managing `user_id`, entry not locked, registration deadline
+        not passed, and the race not cancelled.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, note, note_internal, transport, accommodation]
+              properties:
+                category: { type: string, description: "Required, non-empty." }
+                note: { type: string, nullable: true }
+                note_internal: { type: string, nullable: true }
+                transport: { type: boolean }
+                accommodation: { type: boolean }
+                transport_shared:
+                  type: integer
+                  nullable: true
+                  description: Only used/sent when the race has shared transport (`transport == 3`).
+      responses:
+        "200":
+          description: Signed in, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "Race does not exist, category missing, or registration deadline exceeded."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /{club}/race/{race_id}/signout/{user_id}:
+    post:
+      tags: [Race]
+      operationId: postClubRaceRaceIdSignoutUserId
+      summary: Sign a user out of a race.
+      description: Requires managing `user_id`, entry not locked, race not cancelled.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Signed out, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/race/{race_id}/notify:
+    post:
+      tags: [Race]
+      operationId: postClubRaceRaceIdNotify
+      summary: Send a push notification about a race.
+      description: Requires `policy_mng_big`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+                image: { type: string, format: uri, nullable: true }
+      responses:
+        "200":
+          description: Notification send result.
+          content:
+            application/json:
+              schema: { type: object }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/race/{race_id}/payments:
+    get:
+      tags: [Race]
+      operationId: getClubRaceRaceIdPayments
+      summary: Payments linked to a race.
+      description: Requires `MASK_MNG_BIG` and `MASK_FIN` together.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/RaceId"
+      responses:
+        "200":
+          description: Payments for this race.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RacePayment" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/finances:
+    get:
+      tags: [Finances]
+      operationId: getClubFinances
+      summary: Shortcut for `/finances/user` (own overview).
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Financial overview.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FinanceOverview" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/user:
+    get:
+      tags: [Finances]
+      operationId: getClubFinancesUser
+      summary: Financial overview of the logged-in user (and managed users).
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Financial overview.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FinanceOverview" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/user/{user_id}:
+    get:
+      tags: [Finances]
+      operationId: getClubFinancesUserUserId
+      summary: Financial overview of a specific user.
+      description: Allowed for self, or callers with `MASK_FIN`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Financial overview.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FinanceOverview" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/finances/history:
+    get:
+      tags: [Finances]
+      operationId: getClubFinancesHistory
+      summary: Full payment history of the logged-in user (and payments they pay for others).
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      responses:
+        "200":
+          description: Payment history, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FinanceHistoryItem" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/{fin_id}:
+    get:
+      tags: [Finances]
+      operationId: getClubFinancesFinId
+      summary: Detail of a single payment.
+      description: Allowed for the payment's owner, their manager (`chief_pay`), or `MASK_FIN`.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      responses:
+        "200":
+          description: Payment detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinanceDetail" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Finances]
+      operationId: postClubFinancesFinId
+      summary: Update a payment.
+      description: Requires `MASK_FIN`. All fields optional.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentUpdate" }
+      responses:
+        "200":
+          description: Updated, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [Finances]
+      operationId: deleteClubFinancesFinId
+      summary: Permanently delete a payment.
+      description: Requires `MASK_MNG_BIG` and `MASK_FIN` together.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      responses:
+        "200":
+          description: Deleted, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{club}/finances/{fin_id}/claim/history:
+    get:
+      tags: [Finances]
+      operationId: getClubFinancesFinIdClaimHistory
+      summary: Claim (dispute) message history for a payment.
+      description: >
+        No extra access check beyond being authenticated — any logged-in user
+        can read any payment's claim history.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      responses:
+        "200":
+          description: Claim messages, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ClaimMessage" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/{fin_id}/claim/message:
+    post:
+      tags: [Finances]
+      operationId: postClubFinancesFinIdClaimMessage
+      summary: Add or edit a claim message, and mark the payment as claimed.
+      description: >
+        If the logged-in user already has the most recent claim message on
+        this payment, it is edited in place; otherwise a new message is
+        inserted. Sets `claim = 1` on the payment.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+      responses:
+        "200":
+          description: Saved, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/{fin_id}/claim/close:
+    post:
+      tags: [Finances]
+      operationId: postClubFinancesFinIdClaimClose
+      summary: Close a claim (sets `claim = 0`), keeps message history.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+        - $ref: "#/components/parameters/FinId"
+      responses:
+        "200":
+          description: Closed, no body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /{club}/finances/import:
+    post:
+      tags: [Finances]
+      operationId: postClubFinancesImport
+      summary: Bulk-import payments.
+      description: >
+        Requires `MASK_MNG_BIG` and `MASK_FIN`. Each item is processed
+        independently; one failure does not abort the rest.
+      parameters:
+        - $ref: "#/components/parameters/Club"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/PaymentImportItem" }
+      responses:
+        "200":
+          description: One result per input item, same order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PaymentImportResult" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Obtain via `POST /{club}/system/login`. Send as
+        `Authorization: Bearer <access_token>`. Tokens are valid 90 days and
+        are tied to a device.
+
+  parameters:
+    Club:
+      name: club
+      in: path
+      required: true
+      description: Club short code (e.g. `zbm`). See `GET /clubs`.
+      schema: { type: string, pattern: "^\\w+$" }
+      example: zbm
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema: { type: integer }
+    RaceId:
+      name: race_id
+      in: path
+      required: true
+      schema: { type: integer }
+    FinId:
+      name: fin_id
+      in: path
+      required: true
+      schema: { type: integer }
+    Device:
+      name: device
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing/invalid/expired token.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Authenticated, but lacking the required permission.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: { type: integer, example: 404 }
+        message: { type: string, example: 'Route not found: "/api/3/spe/this-triggers-not-found-error/"' }
+
+    Club:
+      type: object
+      properties:
+        clubname: { type: string, example: zbm }
+        is_release: { type: boolean }
+        fullname: { type: string, example: "SK Brno - Žabovřesky" }
+        shortcut: { type: string, example: ZBM }
+        baseadr: { type: string, format: uri }
+        mainwww: { type: string, format: uri }
+        emailadr: { type: string, format: email }
+
+    Race:
+      type: object
+      properties:
+        race_id: { type: integer }
+        dates:
+          type: array
+          items: { type: string, format: date }
+        entries:
+          type: array
+          items: { type: string, format: date }
+          description: Registration deadline(s).
+        name: { type: string }
+        cancelled: { type: boolean }
+        club: { type: string }
+        link: { type: string, format: uri, nullable: true }
+        place: { type: string, nullable: true }
+        type: { type: string, nullable: true }
+        sport:
+          type: string
+          nullable: true
+          description: Legacy field, always `null` in practice.
+        rankings:
+          type: array
+          items: { type: string }
+        rank21:
+          type: string
+          description: Legacy field, always `"0"` in practice.
+        note: { type: string, nullable: true }
+        transport:
+          type: integer
+          description: "0 = No, 1 = Yes, 2 = Auto Yes, 3 = Shared"
+        accommodation:
+          type: integer
+          description: "0 = No, 1 = Yes, 2 = Auto Yes"
+        categories:
+          type: array
+          items: { type: string }
+
+    RaceParticipant:
+      type: object
+      properties:
+        user_id: { type: integer }
+        name: { type: string }
+        surname: { type: string }
+        reg: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        note_internal: { type: string, nullable: true }
+        transport: { type: integer }
+        transport_shared: { type: integer, nullable: true }
+        accommodation: { type: integer }
+        si_chip: { type: integer, nullable: true }
+
+    RaceDetail:
+      allOf:
+        - $ref: "#/components/schemas/Race"
+        - type: object
+          properties:
+            everyone:
+              type: array
+              items: { $ref: "#/components/schemas/RaceParticipant" }
+
+    RaceRelation:
+      allOf:
+        - $ref: "#/components/schemas/RaceParticipant"
+        - type: object
+          properties:
+            sort_name: { type: string }
+            race_id: { type: integer }
+            is_signed_in: { type: boolean }
+
+    RacePayment:
+      type: object
+      properties:
+        fin_id: { type: integer }
+        editor_user_id: { type: integer, nullable: true }
+        editor_sort_name: { type: string, nullable: true }
+        user_id: { type: integer, nullable: true }
+        user_sort_name: { type: string, nullable: true }
+        chief_pay: { type: integer, nullable: true }
+        note: { type: string, nullable: true }
+        amount: { type: integer }
+        date: { type: string, format: date }
+        storno: { type: integer, nullable: true, description: "1 or null, never 0." }
+        storno_user_id: { type: integer, nullable: true }
+        storno_sort_name: { type: string, nullable: true }
+        storno_date: { type: string, format: date, nullable: true }
+        storno_note: { type: string, nullable: true }
+        claim: { type: integer, description: "0 or 1." }
+
+    UserBasic:
+      type: object
+      properties:
+        user_id: { type: integer }
+        name: { type: string }
+        surname: { type: string }
+        sort_name: { type: string }
+        reg: { type: string, nullable: true }
+        si_chip: { type: integer, nullable: true }
+        chief_id: { type: integer, nullable: true }
+        chief_pay: { type: integer, nullable: true }
+
+    UserManaging:
+      type: object
+      properties:
+        user_id: { type: integer }
+        name: { type: string }
+        surname: { type: string }
+        reg: { type: string, nullable: true }
+        si_chip: { type: integer, nullable: true }
+        chief_id: { type: integer, nullable: true }
+        chief_pay: { type: integer, nullable: true }
+
+    UserListItem:
+      type: object
+      properties:
+        user_id: { type: integer }
+        surname: { type: string }
+        name: { type: string }
+        sort_name: { type: string }
+        si_chip: { type: integer, nullable: true }
+        reg: { type: string, nullable: true }
+        chief_id: { type: integer, nullable: true }
+        chief_pay: { type: integer, nullable: true }
+
+    UserRace:
+      type: object
+      properties:
+        race_id: { type: integer }
+        name: { type: string }
+        category: { type: string, nullable: true }
+
+    UserStatistic:
+      type: object
+      properties:
+        user_id: { type: integer }
+        name: { type: string }
+        surname: { type: string }
+        sort_name: { type: string }
+        device_count: { type: integer }
+        fcm_count: { type: integer }
+
+    UserProfile:
+      type: object
+      properties:
+        user_id: { type: integer }
+        name: { type: string }
+        surname: { type: string }
+        sort_name: { type: string }
+        email: { type: string, format: email, nullable: true }
+        gender: { type: string, nullable: true }
+        birth_date: { type: string, format: date, nullable: true }
+        birth_number: { type: string, nullable: true, description: "Czech/Slovak birth number (sensitive)." }
+        nationality: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        postal_code: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        phone_home: { type: string, nullable: true }
+        phone_work: { type: string, nullable: true }
+        reg: { type: string, nullable: true }
+        si_chip: { type: integer, nullable: true }
+        chief_id: { type: integer, nullable: true }
+        chief_pay: { type: integer, nullable: true }
+        licence_ob: { type: string, nullable: true }
+        licence_lob: { type: string, nullable: true }
+        licence_mtbo: { type: string, nullable: true }
+        is_hidden: { type: boolean }
+        is_entry_locked: { type: boolean }
+
+    UserProfileUpdate:
+      type: object
+      description: All fields optional; see field-level access rules in USER.md.
+      properties:
+        name: { type: string }
+        surname: { type: string }
+        gender: { type: string }
+        birth_date: { type: string, format: date }
+        birth_number: { type: string }
+        nationality: { type: string }
+        reg: { type: string }
+        is_hidden: { type: boolean }
+        address: { type: string }
+        city: { type: string }
+        email: { type: string, format: email }
+        postal_code: { type: string }
+        phone: { type: string, nullable: true }
+        phone_home: { type: string, nullable: true }
+        phone_work: { type: string, nullable: true }
+        si_chip: { type: integer }
+        licence_ob: { type: string, nullable: true }
+        licence_lob: { type: string, nullable: true }
+        licence_mtbo: { type: string, nullable: true }
+
+    Policies:
+      type: object
+      properties:
+        policy_adm: { type: boolean }
+        policy_adm_small: { type: boolean }
+        policy_news: { type: boolean }
+        policy_regs: { type: boolean }
+        policy_fin: { type: boolean }
+        policy_mng_big: { type: boolean }
+        policy_mng_small: { type: boolean }
+
+    FlagOption:
+      type: object
+      description: One bit of a bitmask, unpacked.
+      properties:
+        name: { type: string }
+        id: { type: integer }
+        value: { type: boolean }
+
+    NotifySettings:
+      type: object
+      properties:
+        notify_type:
+          type: array
+          items: { $ref: "#/components/schemas/FlagOption" }
+        email: { type: string, format: email }
+        send_news: { type: boolean }
+        send_races: { type: boolean }
+        days_before: { type: integer }
+        days_before_min: { type: integer }
+        days_before_max: { type: integer }
+        race_types:
+          type: array
+          items: { $ref: "#/components/schemas/FlagOption" }
+        rankings:
+          type: array
+          items: { $ref: "#/components/schemas/FlagOption" }
+        send_changes: { type: boolean }
+        send_changes_data:
+          type: array
+          items: { $ref: "#/components/schemas/FlagOption" }
+        send_finances:
+          type: boolean
+          nullable: true
+          description: "null if finances are disabled club-wide."
+        send_finances_data:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/FlagOption" }
+        financial_limit: { type: integer, nullable: true }
+        send_member_minus:
+          type: boolean
+          description: Visible only with finances enabled and `policy_fin`.
+        send_internal_entry_expired:
+          type: boolean
+          nullable: true
+          description: Visible only with `policy_regs`.
+
+    NotifySettingsUpdate:
+      type: object
+      description: >
+        All fields optional. Bitmask fields are sent as integers (sum/OR of
+        the relevant `id` values), unlike the unpacked arrays returned by GET.
+      properties:
+        notify_type: { type: integer }
+        email: { type: string, format: email, nullable: true }
+        send_news: { type: boolean }
+        send_races: { type: boolean }
+        days_before: { type: integer }
+        race_types: { type: integer }
+        rankings: { type: integer }
+        send_changes: { type: boolean }
+        send_changes_data: { type: integer }
+        send_finances: { type: boolean }
+        send_finances_data: { type: integer }
+        financial_limit: { type: integer }
+        send_member_minus: { type: boolean }
+        send_internal_entry_expired: { type: boolean }
+
+    Device:
+      type: object
+      properties:
+        device: { type: string }
+        device_name: { type: string, nullable: true }
+        fcm_token_timestamp: { type: string, format: date-time, nullable: true }
+        fcm_status: { type: boolean }
+        app_last_opened: { type: string, format: date-time, nullable: true }
+
+    FinanceOverview:
+      type: object
+      properties:
+        user_id: { type: integer }
+        sort_name: { type: string }
+        total: { type: integer }
+
+    FinanceHistoryItem:
+      type: object
+      properties:
+        fin_id: { type: integer }
+        editor_user_id: { type: integer, nullable: true }
+        editor_sort_name: { type: string, nullable: true }
+        user_id: { type: integer }
+        user_sort_name: { type: string }
+        race_name: { type: string, nullable: true }
+        race_cancelled: { type: integer, nullable: true }
+        race_date: { type: string, format: date-time, nullable: true }
+        note: { type: string, nullable: true }
+        amount: { type: integer }
+        date: { type: string, format: date }
+        storno: { type: integer, nullable: true }
+        storno_user_id: { type: integer, nullable: true }
+        storno_date: { type: string, format: date, nullable: true }
+        storno_note: { type: string, nullable: true }
+        claim: { type: integer }
+
+    FinanceDetail:
+      allOf:
+        - $ref: "#/components/schemas/FinanceHistoryItem"
+        - type: object
+          properties:
+            chief_pay: { type: integer, nullable: true }
+            race_id: { type: integer, nullable: true }
+            storno_sort_name: { type: string, nullable: true }
+
+    PaymentUpdate:
+      type: object
+      description: All fields optional.
+      properties:
+        editor_user_id: { type: integer, description: "Maps to id_users_editor." }
+        user_id: { type: integer, description: "Maps to id_users_user." }
+        race_id: { type: integer, description: "Maps to id_zavod." }
+        amount: { type: integer }
+        date: { type: string, format: date }
+        note: { type: string }
+        storno:
+          type: boolean
+          nullable: true
+          description: "true -> stored as 1; false/omitted -> stored as null."
+        storno_by: { type: integer }
+        storno_date: { type: string, format: date }
+        storno_note: { type: string }
+        claim: { type: boolean, nullable: true }
+
+    ClaimMessage:
+      type: object
+      properties:
+        claim_id: { type: integer }
+        user_id: { type: integer }
+        payment_id: { type: integer }
+        text: { type: string }
+        date: { type: string, format: date-time }
+        sort_name: { type: string }
+
+    PaymentImportItem:
+      type: object
+      required: [user_id, race_id, amount, date, note]
+      properties:
+        user_id: { type: integer }
+        race_id: { type: integer, description: "0 if not linked to a race." }
+        amount: { type: integer }
+        date: { type: string, format: date }
+        note: { type: string }
+        editor_user_id:
+          type: integer
+          description: Defaults to the logged-in user.
+
+    PaymentImportResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        id: { type: integer, nullable: true }
+        error: { type: string }
