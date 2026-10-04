@@ -4,6 +4,7 @@
 - [USER](USER.md)
 - [FINANCES](FINANCES.md)
 - [SYSTEM](SYSTEM.md)
+- [OpenAPI specification](openapi.yaml)
 
 # TODO:
 
